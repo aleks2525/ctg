@@ -1,0 +1,2643 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>КТГ Анализатор ИТЭЛМА</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        /* Стили для предотвращения мелькания при загрузке */
+        [x-cloak] { display: none !important; }
+        
+        /* Стили для значков сессий */
+        .session-info-mini {
+            display: flex;
+            gap: 5px;
+            margin: 5px 0;
+            flex-wrap: wrap;
+        }
+        .session-info-mini .badge {
+            background: #2196f3;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+        .session-info-mini .badge.success {
+            background: #4caf50;
+        }
+        
+        /* Стили для графиков */
+        .chart-container {
+            margin-bottom: 30px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            overflow: visible;
+        }
+        
+        .chart-container > div {
+            margin: 0;
+        }
+        
+        .chart-container:last-child {
+            margin-bottom: 0;
+        }
+        
+        .hypoxia-chart {
+            margin-top: 40px;
+        }
+        
+        /* Прогресс бар загрузки файлов */
+        .upload-progress-bar {
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .upload-progress-fill {
+            height: 100%;
+            background: #4caf50;
+            transition: width 0.3s ease;
+        }
+        
+        /* Стили для отображения риска гипоксии */
+        .hypoxia-risk-small {
+            font-size: 11px;
+            margin: 2px 0;
+            padding: 2px 4px;
+            background: rgba(255, 193, 7, 0.1);
+            border-radius: 3px;
+            color: #f57c00;
+        }
+        
+        .hypoxia-risk-small .material-icons {
+            font-size: 12px;
+            vertical-align: middle;
+            margin-right: 2px;
+        }
+    </style>
+</head>
+<body x-data="ctgApp()" x-cloak>
+    <!-- Компактное меню для внутренних страниц -->
+    <div class="compact-menu-btn" x-show="currentPage !== 'home'" x-data="{ open: false }">
+        <button @click="open = !open" class="menu-toggle">
+            <i class="material-icons">menu</i>
+        </button>
+        <div x-show="open" @click.away="open = false" class="menu-dropdown">
+            <a @click="navigateTo('home'); open = false" class="menu-item">Главная</a>
+            <a @click="navigateTo('historical'); open = false" class="menu-item" :class="{'active': currentPage === 'historical'}">Исторические данные КТГ</a>
+            <a @click="navigateTo('monitoring'); open = false" class="menu-item" :class="{'active': currentPage === 'monitoring'}">Мониторинг КТГ</a>
+            <a @click="navigateTo('database'); open = false" class="menu-item" :class="{'active': currentPage === 'database'}">База данных пациенток</a>
+        </div>
+    </div>
+
+    <!-- Основной контент -->
+    <main class="content-container">
+        <!-- Главная страница -->
+        <div x-show="currentPage === 'home'" class="home-page">
+            <div class="main-card">
+                <!-- Шапка из главной страницы -->
+                <div class="main-header-compact">
+                    <div class="logo-container-compact">
+                        <img src="/static/logo.png" alt="Логотип ИТЭЛМА" width="150" height="83">
+                        <h2 class="app-title-compact">Программный комплекс анализа кардиотокограммы (КТГ)</h2>
+                    </div>
+                </div>
+                
+                <div class="center-align">
+                    <h3><center>Выберите раздел для начала работы</center></h3>
+                    
+                    <div class="main-buttons">
+                        <div class="main-button" @click="navigateTo('historical')">
+                            <div class="button-icon blue-bg">
+                                <i class="material-icons large">history</i>
+                            </div>
+                            <h5>Исторические данные КТГ</h5>
+                            <p>Анализ ранее записанных кардиотокограмм</p>
+                        </div>
+                        
+                        <div class="main-button" @click="navigateTo('monitoring')">
+                            <div class="button-icon teal-bg">
+                                <i class="material-icons large">monitor_heart</i>
+                            </div>
+                            <h5>Мониторинг КТГ</h5>
+                            <p>Просмотр данных в реальном времени</p>
+                        </div>
+                        
+                        <div class="main-button" @click="navigateTo('database')">
+                            <div class="button-icon green-bg">
+                                <i class="material-icons large">storage</i>
+                            </div>
+                            <h5>База данных пациенток</h5>
+                            <p>Управление данными пациенток</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Футер из главной страницы -->
+                <div class="main-footer-compact">
+                    <div class="footer-links-compact">
+                        <a href="#" class="footer-link-compact">
+                            <i class="material-icons">info</i>
+                            <span>Справка о программе</span>
+                        </a>
+                        <a href="#" class="footer-link-compact">
+                            <i class="material-icons">book</i>
+                            <span>Руководство пользователя</span>
+                        </a>
+                        <a href="#" class="footer-link-compact">
+                            <i class="material-icons">medical_services</i>
+                            <span>Клинические классификации и руководства</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Информационные блоки для мониторинга -->
+                <div class="row" x-show="analysisData">
+                    <div class="col s12 m4 l3 info-col">
+                        <div class="info-block monitoring-info">
+                            <h6>Текущие показатели</h6>
+                            <div x-show="analysisData">
+                                <p><b>Базовый ритм:</b> <span x-text="analysisData?.fhrBase ? Math.round(analysisData.fhrBase) : '---'"></span> уд/мин</p>
+                                <p><b>Вариабельность:</b> <span x-text="analysisData?.variability ? (analysisData.variability * 10).toFixed(1) : '---'"></span> мс</p>
+                                <p><b>Статус:</b> 
+                                    <span class="status-text" :class="{
+                                        'green-text': analysisData?.status === 'normal',
+                                        'orange-text': analysisData?.status === 'bradycardia',
+                                        'red-text': analysisData?.status === 'tachycardia'
+                                    }">
+                                        <span x-show="analysisData?.status === 'normal'">Нормальный</span>
+                                        <span x-show="analysisData?.status === 'bradycardia'">Брадикардия</span>
+                                        <span x-show="analysisData?.status === 'tachycardia'">Тахикардия</span>
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col s12 m4 l3 info-col">
+                        <div class="info-block monitoring-info">
+                            <h6>Активность</h6>
+                            <div x-show="analysisData">
+                                <p><b>Акселерации:</b> <span x-text="ctgStatistics && ctgStatistics.accelerations ? ctgStatistics.accelerations : '0'"></span></p>
+                                <p><b>Децелерации:</b> <span x-text="ctgStatistics && ctgStatistics.decelerations ? ctgStatistics.decelerations : '0'"></span></p>
+                                <p><b>Последнее обновление:</b> <span x-text="analysisData?.lastUpdate || '---'"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col s12 m4 l3 info-col">
+                        <div class="info-block monitoring-info">
+                            <h6>Прогнозы</h6>
+                            <div x-show="analysisData">
+                                <div class="forecast-item">
+                                    <span class="forecast-time">15 мин:</span>
+                                    <span class="forecast-status" :class="`forecast-${analysisData?.forecast15min?.status || 'normal'}`">
+                                        <span x-text="analysisData?.forecast15min?.text || 'Нет данных'"></span>
+                                    </span>
+                                </div>
+                                <div class="forecast-item">
+                                    <span class="forecast-time">30 мин:</span>
+                                    <span class="forecast-status" :class="`forecast-${analysisData?.forecast30min?.status || 'normal'}`">
+                                        <span x-text="analysisData?.forecast30min?.text || 'Нет данных'"></span>
+                                    </span>
+                                </div>
+                                <div class="forecast-item">
+                                    <span class="forecast-time">60+ мин:</span>
+                                    <span class="forecast-status" :class="`forecast-${analysisData?.forecast60min?.status || 'normal'}`">
+                                        <span x-text="analysisData?.forecast60min?.text || 'Нет данных'"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col s12 m4 l3 info-col">
+                        <div class="info-block monitoring-info">
+                            <h6>Риск гипоксии</h6>
+                            <div x-show="hypoxiaData && Array.isArray(hypoxiaData) && hypoxiaData.length > 0">
+                                <div class="hypoxia-indicator">
+                                    <div class="hypoxia-value" x-text="hypoxiaData && Array.isArray(hypoxiaData) && hypoxiaData.length > 0 ? (hypoxiaData[hypoxiaData.length - 1]?.risk ? (hypoxiaData[hypoxiaData.length - 1].risk * 100).toFixed(0) : '0') : '0'"></div>
+                                    <div class="hypoxia-label">%</div>
+                                </div>
+                                <p class="hypoxia-trend">
+                                    <span x-show="hypoxiaData && Array.isArray(hypoxiaData) && hypoxiaData.length > 1">
+                                        <i class="material-icons" :class="hypoxiaData && Array.isArray(hypoxiaData) && hypoxiaData.length > 1 && hypoxiaData[hypoxiaData.length - 1]?.risk > hypoxiaData[hypoxiaData.length - 2]?.risk ? 'red-text' : 'green-text'">
+                                            <span x-show="hypoxiaData && Array.isArray(hypoxiaData) && hypoxiaData.length > 1 && hypoxiaData[hypoxiaData.length - 1]?.risk > hypoxiaData[hypoxiaData.length - 2]?.risk">trending_up</span>
+                                            <span x-show="hypoxiaData && Array.isArray(hypoxiaData) && hypoxiaData.length > 1 && hypoxiaData[hypoxiaData.length - 1]?.risk <= hypoxiaData[hypoxiaData.length - 2]?.risk">trending_down</span>
+                                        </i>
+                                    </span>
+                                    <span x-text="hypoxiaData && Array.isArray(hypoxiaData) && hypoxiaData.length > 1 ? (hypoxiaData[hypoxiaData.length - 1]?.risk > hypoxiaData[hypoxiaData.length - 2]?.risk ? 'Растет' : 'Снижается') : 'Стабильно'"></span>
+                                </p>
+                            </div>
+                            <div x-show="!hypoxiaData || !Array.isArray(hypoxiaData) || hypoxiaData.length === 0" class="grey-text">
+                                Нет данных
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<!-- Страница исторических данных КТГ -->
+<div x-show="currentPage === 'historical'" class="historical-page">
+    <!-- Панель управления воспроизведением -->
+    <div class="playback-control-panel" x-show="analysisData">
+        <div class="playback-buttons">
+            <button class="playback-btn">
+                <i class="material-icons">skip_previous</i>
+            </button>
+            <div class="speed-control">
+                <button class="speed-btn" :class="{'active': playbackSpeed === 1}">1x</button>
+                <button class="speed-btn" :class="{'active': playbackSpeed === 2}">2x</button>
+                <button class="speed-btn" :class="{'active': playbackSpeed === 4}">4x</button>
+                <button class="speed-btn" :class="{'active': playbackSpeed === 8}">8x</button>
+            </div>
+            <button class="playback-btn pause-btn">
+                <i class="material-icons">pause</i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Кнопка настроек -->
+    
+    
+    <!-- Кнопка настроек -->
+    <div class="settings-btn" x-show="analysisData" x-data="{ open: false }">
+        <button @click="open = !open" class="settings-toggle">
+            <i class="material-icons">settings</i>
+        </button>
+        <div x-show="open" @click.away="open = false" class="settings-dropdown">
+            <a @click="showAnalysisParams = true; open = false" class="settings-item">
+                <i class="material-icons left">tune</i>Параметры анализа
+            </a>
+            <a class="settings-item">
+                <i class="material-icons left">schedule</i>Выбрать период
+            </a>
+            <a @click="generateReport(); open = false" class="settings-item">
+                <i class="material-icons left">description</i>Сохранить отчет
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col s12 m8 l9 charts-col">
+            <div class="card-panel charts-panel">
+                <div class="analysis-controls">
+                    <button @click="showPatientForm = true" class="analysis-btn" x-show="!showPatientForm && !analysisData">
+                        <i class="material-icons left">person_add</i>Новая пациентка
+                    </button>
+                    <button @click="navigateTo('database')" class="analysis-btn" x-show="!showPatientForm && !analysisData">
+                        <i class="material-icons left">folder_open</i>Выбрать пациентку из базы
+                    </button>
+                </div>
+                
+                <div x-show="showPatientForm" class="card-panel">
+                    <h5>Новая пациентка</h5>
+                    <form @submit.prevent="submitNewPatient()">
+                        <div class="input-field">
+                            <input id="fullName" type="text" x-model="newPatient.fullName" required>
+                            <label for="fullName">ФИО</label>
+                        </div>
+                        
+                        <div class="input-field" style="margin-top: 1.5rem;">
+                            <textarea id="diagnosis" class="materialize-textarea" x-model="newPatient.diagnosis" rows="4"></textarea>
+                            <label for="diagnosis">Диагноз</label>
+                        </div>
+                        
+                        <h6>Векторы анамнеза:</h6>
+                        <div class="vectors-grid">
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="diabetes" x-model="newPatient.diabetes">
+                                <label for="diabetes">Сахарный диабет</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="anemia" x-model="newPatient.anemia">
+                                <label for="anemia">Анемия</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="hypertension" x-model="newPatient.hypertension">
+                                <label for="hypertension">Хроническая гипертония</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="preeclampsia" x-model="newPatient.preeclampsia">
+                                <label for="preeclampsia">Преэклампсия</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="infections" x-model="newPatient.infections">
+                                <label for="infections">Инфекционные заболевания во время беременности</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="multiple" x-model="newPatient.multiple">
+                                <label for="multiple">Многоплодная беременность</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="placenta" x-model="newPatient.placenta">
+                                <label for="placenta">Патологии плаценты и пуповины</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="term" x-model="newPatient.term">
+                                <label for="term">Срок беременности меньше 37 или больше 41 недели</label>
+                            </div>
+                        </div>
+                        
+                        <h6>Загрузить КТГ данные:</h6>
+                        <div class="file-upload">
+                            <input type="file" @change="handleFileUpload($event, 'fhr')" accept=".csv">
+                            <i class="material-icons left">upload_file</i>Загрузить FHR данные
+                            <div x-show="uploadProgress.fhr > 0" class="upload-progress-bar">
+                                <div class="upload-progress-fill" :style="`width: ${uploadProgress.fhr}%`"></div>
+                            </div>
+                        </div>
+                        <div class="file-upload" style="margin-left: 1rem;">
+                            <input type="file" @change="handleFileUpload($event, 'uc')" accept=".csv">
+                            <i class="material-icons left">upload_file</i>Загрузить UC данные
+                            <div x-show="uploadProgress.uc > 0" class="upload-progress-bar">
+                                <div class="upload-progress-fill" :style="`width: ${uploadProgress.uc}%`"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" @click="showPatientForm = false" class="btn-cancel">
+                                Отмена
+                            </button>
+                            <button type="submit" class="btn-submit" x-show="uploadedFiles.fhr && uploadedFiles.uc">
+                                Анализировать <i class="material-icons right">analytics</i>
+                            </button>
+                            <button type="button" @click="savePatient" class="btn-save">
+                                Сохранить <i class="material-icons right">save</i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div x-show="!showPatientForm && !analysisData" class="empty-state">
+                    <i class="material-icons">info</i>
+                    <p>Для анализа данных выберите пациентку из базы или создайте новую</p>
+                </div>
+                
+                <div x-show="analysisData" class="chart-container">
+                    <div class="chart-title" style="color: #2196f3;">ЧСС плода (FHR)</div>
+                    <div id="fhrChart"></div>
+                </div>
+                
+                <div x-show="analysisData" class="chart-container">
+                    <div class="chart-title" style="color: #f44336;">Сокращения матки (UC)</div>
+                    <div id="ucChart"></div>
+                </div>
+                
+                <div x-show="analysisData" class="chart-container hypoxia-chart">
+                    <div class="chart-title">Риск гипоксии</div>
+                    <div id="hypoxiaChart"></div>
+                </div>
+                
+                <div x-show="analysisProgress > 0 && analysisProgress < 100" class="analysis-progress">
+                    <div class="progress-bar" :style="`width: ${analysisProgress}%`"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col s12 m4 l3 info-col">
+            <div class="info-block">
+                <div x-show="analysisData">
+                    <p><b>Базовый ритм:</b> <span x-text="analysisData?.fhrBase ? Math.round(analysisData.fhrBase) : '---'"></span> уд/мин</p>
+                    <p><b>Вариабельность:</b> <span x-text="analysisData?.variability ? (analysisData.variability * 10).toFixed(1) : '---'"></span> мс</p>
+                </div>
+                <div x-show="!analysisData" class="grey-text">
+                    Данные будут отображены после анализа
+                </div>
+            </div>
+            
+            <div class="info-block status-forecast">
+                <div x-show="analysisData">
+                    <p class="status-text" :class="{
+                        'green-text': analysisData?.status === 'normal',
+                        'orange-text': analysisData?.status === 'bradycardia' || analysisData?.status === 'warning',
+                        'red-text': analysisData?.status === 'tachycardia' || analysisData?.status === 'danger'
+                    }">
+                        <span x-show="analysisData?.status === 'normal'">Нормальный ритм</span>
+                        <span x-show="analysisData?.status === 'bradycardia' || analysisData?.status === 'warning'">Брадикардия</span>
+                        <span x-show="analysisData?.status === 'tachycardia' || analysisData?.status === 'danger'">Тахикардия</span>
+                        <span x-show="!analysisData?.status || (analysisData?.status !== 'normal' && analysisData?.status !== 'bradycardia' && analysisData?.status !== 'tachycardia' && analysisData?.status !== 'warning' && analysisData?.status !== 'danger')">Неизвестно</span>
+                    </p>
+                    
+                    <div class="forecast-card" :class="`forecast-${analysisData?.forecast15min?.status || 'normal'}`">
+                        <p><b>15 минут:</b> <span x-text="analysisData?.forecast15min?.text || 'Нет данных'"></span></p>
+                        <p class="hypoxia-risk-small" x-show="analysisData?.forecast15min?.hypoxia_risk !== undefined">
+                            <i class="material-icons tiny">warning</i>
+                            Риск гипоксии: <span x-text="Math.round((analysisData?.forecast15min?.hypoxia_risk || 0) * 100)"></span>%
+                        </p>
+                    </div>
+                    <div class="forecast-card" :class="`forecast-${analysisData?.forecast30min?.status || 'normal'}`">
+                        <p><b>30 минут:</b> <span x-text="analysisData?.forecast30min?.text || 'Нет данных'"></span></p>
+                        <p class="hypoxia-risk-small" x-show="analysisData?.forecast30min?.hypoxia_risk !== undefined">
+                            <i class="material-icons tiny">warning</i>
+                            Риск гипоксии: <span x-text="Math.round((analysisData?.forecast30min?.hypoxia_risk || 0) * 100)"></span>%
+                        </p>
+                    </div>
+                    <div class="forecast-card" :class="`forecast-${analysisData?.forecast60min?.status || 'normal'}`">
+                        <p><b>60+ минут:</b> <span x-text="analysisData?.forecast60min?.text || 'Нет данных'"></span></p>
+                        <p class="hypoxia-risk-small" x-show="analysisData?.forecast60min?.hypoxia_risk !== undefined">
+                            <i class="material-icons tiny">warning</i>
+                            Риск гипоксии: <span x-text="Math.round((analysisData?.forecast60min?.hypoxia_risk || 0) * 100)"></span>%
+                        </p>
+                    </div>
+                    
+                    <div class="statistics-link">
+                        <a @click="showStatistics = true" class="link-small">
+                            <i class="material-icons left">bar_chart</i>Статистика КТГ
+                        </a>
+                        <a @click="performSessionAnalysis()" class="link-small" x-show="analysisData && analysisData.fhrBase === 0">
+                            <i class="material-icons left">analytics</i>Выполнить анализ
+                        </a>
+                        <a @click="performSessionAnalysis()" class="link-small" x-show="analysisData && analysisData.fhrBase > 0">
+                            <i class="material-icons left">refresh</i>Переанализировать
+                        </a>
+                        <p><small class="grey-text">Отладка прогнозов: 15min=<span x-text="JSON.stringify(analysisData?.forecast15min)"></span></small></p>
+                    </div>
+                </div>
+                <div x-show="!analysisData" class="grey-text">
+                    Статус будет доступен после анализа
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <!-- Страница мониторинга КТГ -->
+        <div x-show="currentPage === 'monitoring'" class="monitoring-page">
+            <div class="card-panel">
+                <!-- Блок статуса соединения -->
+                <div class="connection-status-bar">
+                    <div class="connection-info">
+                        <span class="status-indicator" :class="connectionStatus ? 'status-connected' : 'status-disconnected'"></span>
+                        <span x-show="connectionStatus">Соединение установлено</span>
+                        <span x-show="!connectionStatus">Нет соединения с датчиками</span>
+                    </div>
+                    <div class="connection-buttons">
+                        <button @click="startTestData" class="btn" :class="{'disabled': testDataRunning || connectionStatus}">
+                            <i class="material-icons left">play_arrow</i>Запуск тестовых данных
+                        </button>
+                        <button @click="connectionStatus ? stopTestData() : toggleConnection()" class="btn" :class="connectionStatus ? 'red' : 'green'">
+                            <span x-show="!connectionStatus">Подключиться</span>
+                            <span x-show="connectionStatus">Отключиться</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Кнопка настроек -->
+                <div class="settings-btn" x-show="analysisData" x-data="{ open: false }">
+                    <button @click="open = !open" class="settings-toggle">
+                        <i class="material-icons">settings</i>
+                    </button>
+                    <div x-show="open" @click.away="open = false" class="settings-dropdown">
+                        <a @click="showAnalysisParams = true; open = false" class="settings-item">
+                            <i class="material-icons left">tune</i>Параметры анализа
+                        </a>
+                        <a class="settings-item">
+                            <i class="material-icons left">schedule</i>Выбрать период
+                        </a>
+                        <a @click="generateReport(); open = false" class="settings-item">
+                            <i class="material-icons left">description</i>Сохранить отчет
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Панель управления скоростью -->
+                <div class="speed-control-panel" x-show="testDataRunning || connectionStatus">
+                    <div class="speed-control-title">Скорость воспроизведения:</div>
+                    <div class="speed-buttons">
+                        <button @click="setSpeed(1)" class="speed-btn" :class="{'active': playbackSpeed === 1}">1x</button>
+                        <button @click="setSpeed(2)" class="speed-btn" :class="{'active': playbackSpeed === 2}">2x</button>
+                        <button @click="setSpeed(4)" class="speed-btn" :class="{'active': playbackSpeed === 4}">4x</button>
+                        <button @click="setSpeed(8)" class="speed-btn" :class="{'active': playbackSpeed === 8}">8x</button>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col s12 m8 l9 charts-col">
+                        <div class="card-panel charts-panel">
+                            <div class="analysis-controls">
+                                <button @click="showPatientForm = true" class="analysis-btn" x-show="!showPatientForm && !analysisData">
+                                    <i class="material-icons left">person_add</i>Новая пациентка
+                                </button>
+                                <button @click="navigateTo('database')" class="analysis-btn" x-show="!showPatientForm && !analysisData">
+                                    <i class="material-icons left">folder_open</i>Выбрать пациентку из базы
+                                </button>
+                            </div>
+                            
+                            <div x-show="showPatientForm" class="card-panel">
+                                <h5>Новая пациентка</h5>
+                                <form @submit.prevent="submitNewPatient()">
+                                    <div class="input-field">
+                                        <input id="fullName" type="text" x-model="newPatient.fullName" required>
+                                        <label for="fullName">ФИО</label>
+                                    </div>
+                                    
+                                    <div class="input-field" style="margin-top: 1.5rem;">
+                                        <textarea id="diagnosis" class="materialize-textarea" x-model="newPatient.diagnosis" rows="4"></textarea>
+                                        <label for="diagnosis">Диагноз</label>
+                                    </div>
+                                    
+                                    <h6>Векторы анамнеза:</h6>
+                                    <div class="vectors-grid">
+                                        <div class="checkbox-container">
+                                            <input type="checkbox" id="diabetes" x-model="newPatient.diabetes">
+                                            <label for="diabetes">Сахарный диабет</label>
+                                        </div>
+                                        <div class="checkbox-container">
+                                            <input type="checkbox" id="anemia" x-model="newPatient.anemia">
+                                            <label for="anemia">Анемия</label>
+                                        </div>
+                                        <div class="checkbox-container">
+                                            <input type="checkbox" id="hypertension" x-model="newPatient.hypertension">
+                                            <label for="hypertension">Хроническая гипертония</label>
+                                        </div>
+                                        <div class="checkbox-container">
+                                            <input type="checkbox" id="preeclampsia" x-model="newPatient.preeclampsia">
+                                            <label for="preeclampsia">Преэклампсия</label>
+                                        </div>
+                                        <div class="checkbox-container">
+                                            <input type="checkbox" id="infections" x-model="newPatient.infections">
+                                            <label for="infections">Инфекционные заболевания во время беременности</label>
+                                        </div>
+                                        <div class="checkbox-container">
+                                            <input type="checkbox" id="multiple" x-model="newPatient.multiple">
+                                            <label for="multiple">Многоплодная беременность</label>
+                                        </div>
+                                        <div class="checkbox-container">
+                                            <input type="checkbox" id="placenta" x-model="newPatient.placenta">
+                                            <label for="placenta">Патологии плаценты и пуповины</label>
+                                        </div>
+                                        <div class="checkbox-container">
+                                            <input type="checkbox" id="term" x-model="newPatient.term">
+                                            <label for="term">Срок беременности меньше 37 или больше 41 недели</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <h6>Загрузить КТГ данные:</h6>
+                                    <div class="file-upload">
+                                        <input type="file" @change="handleFileUpload($event, 'fhr')" accept=".csv">
+                                        <i class="material-icons left">upload_file</i>Загрузить FHR данные
+                                    </div>
+                                    <div class="file-upload" style="margin-left: 1rem;">
+                                        <input type="file" @change="handleFileUpload($event, 'uc')" accept=".csv">
+                                        <i class="material-icons left">upload_file</i>Загрузить UC данные
+                                    </div>
+                                    
+                                    <div class="form-actions">
+                                        <button type="button" @click="showPatientForm = false" class="btn-cancel">
+                                            Отмена
+                                        </button>
+                                        <button type="submit" class="btn-submit" x-show="uploadedFiles.fhr && uploadedFiles.uc">
+                                            Анализировать <i class="material-icons right">analytics</i>
+                                        </button>
+                                        <button type="button" @click="savePatient" class="btn-save">
+                                            Сохранить <i class="material-icons right">save</i>
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <div x-show="!showPatientForm && !analysisData" class="empty-state">
+                                <i class="material-icons">info</i>
+                                <p>Для анализа данных выберите пациентку из базы или создайте новую</p>
+                            </div>
+                            
+                            <div x-show="analysisData" class="chart-container">
+                                <div class="chart-title" style="color: #2196f3;">ЧСС плода (FHR)</div>
+                                <div id="monitoringFhrChart"></div>
+                            </div>
+                            
+                            <div x-show="analysisData" class="chart-container">
+                                <div class="chart-title" style="color: #f44336;">Сокращения матки (UC)</div>
+                                <div id="monitoringUcChart"></div>
+                            </div>
+                            
+                            <div x-show="analysisData" class="chart-container hypoxia-chart">
+                                <div class="chart-title">Риск гипоксии</div>
+                                <div id="monitoringHypoxiaChart"></div>
+                            </div>
+                            
+                            <div x-show="analysisProgress > 0 && analysisProgress < 100" class="analysis-progress">
+                                <div class="progress-bar" :style="`width: ${analysisProgress}%`"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col s12 m4 l3 info-col">
+                        <div class="info-block">
+                            <div x-show="analysisData">
+                            <p><b>Базовый ритм:</b> <span x-text="analysisData?.fhrBase ? Math.round(analysisData.fhrBase) : '---'"></span> уд/мин</p>
+                            <p><b>Вариабельность:</b> <span x-text="analysisData?.variability ? (analysisData.variability * 10).toFixed(1) : '---'"></span> мс</p>
+                            </div>
+                            <div x-show="!analysisData" class="grey-text">
+                                Данные будут отображены после анализа
+                            </div>
+                        </div>
+                        
+                        <div class="info-block status-forecast">
+                            <div x-show="analysisData">
+                                <p class="status-text" :class="{
+                                'green-text': analysisData?.status === 'normal',
+                                'orange-text': analysisData?.status === 'bradycardia' || analysisData?.status === 'warning',
+                                'red-text': analysisData?.status === 'tachycardia' || analysisData?.status === 'danger'
+                            }">
+                                <span x-show="analysisData?.status === 'normal'">Нормальный ритм</span>
+                                <span x-show="analysisData?.status === 'bradycardia' || analysisData?.status === 'warning'">Брадикардия</span>
+                                <span x-show="analysisData?.status === 'tachycardia' || analysisData?.status === 'danger'">Тахикардия</span>
+                                <span x-show="!analysisData?.status || (analysisData?.status !== 'normal' && analysisData?.status !== 'bradycardia' && analysisData?.status !== 'tachycardia' && analysisData?.status !== 'warning' && analysisData?.status !== 'danger')">Неизвестно</span>
+                            </p>
+                            
+                            <div class="forecast-card" :class="`forecast-${analysisData?.forecast15min?.status || 'normal'}`">
+                                <p><b>15 минут:</b> <span x-text="analysisData?.forecast15min?.text || 'Нет данных'"></span></p>
+                                <p class="hypoxia-risk-small" x-show="analysisData?.forecast15min?.hypoxia_risk !== undefined">
+                                    <i class="material-icons tiny">warning</i>
+                                    Риск гипоксии: <span x-text="Math.round((analysisData?.forecast15min?.hypoxia_risk || 0) * 100)"></span>%
+                                </p>
+                            </div>
+                            <div class="forecast-card" :class="`forecast-${analysisData?.forecast30min?.status || 'normal'}`">
+                                <p><b>30 минут:</b> <span x-text="analysisData?.forecast30min?.text || 'Нет данных'"></span></p>
+                                <p class="hypoxia-risk-small" x-show="analysisData?.forecast30min?.hypoxia_risk !== undefined">
+                                    <i class="material-icons tiny">warning</i>
+                                    Риск гипоксии: <span x-text="Math.round((analysisData?.forecast30min?.hypoxia_risk || 0) * 100)"></span>%
+                                </p>
+                            </div>
+                            <div class="forecast-card" :class="`forecast-${analysisData?.forecast60min?.status || 'normal'}`">
+                                <p><b>60+ минут:</b> <span x-text="analysisData?.forecast60min?.text || 'Нет данных'"></span></p>
+                                <p class="hypoxia-risk-small" x-show="analysisData?.forecast60min?.hypoxia_risk !== undefined">
+                                    <i class="material-icons tiny">warning</i>
+                                    Риск гипоксии: <span x-text="Math.round((analysisData?.forecast60min?.hypoxia_risk || 0) * 100)"></span>%
+                                </p>
+                            </div>
+                                
+                                <div class="statistics-link">
+                                    <a @click="showStatistics = true" class="link-small">
+                                        <i class="material-icons left">bar_chart</i>Статистика КТГ
+                                    </a>
+                                    <a @click="performSessionAnalysis()" class="link-small" x-show="analysisData && analysisData.fhrBase === 0">
+                                        <i class="material-icons left">analytics</i>Выполнить анализ
+                                    </a>
+                                    <a @click="performSessionAnalysis()" class="link-small" x-show="analysisData && analysisData.fhrBase > 0">
+                                        <i class="material-icons left">refresh</i>Переанализировать
+                                    </a>
+                                </div>
+                            </div>
+                            <div x-show="!analysisData" class="grey-text">
+                                Статус будет доступен после анализа
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Страница базы данных пациенток -->
+        <div x-show="currentPage === 'database'" class="database-page">
+            <div class="card-panel">
+               <div class="db-controls">
+                    <button class="db-btn" @click="showCreateDatabase = true">
+                        <i class="material-icons left">add_circle</i>Создать базу
+                    </button>
+                    <button class="db-btn" @click="showPatientForm = true">
+                        <i class="material-icons left">person_add</i>Новая пациентка
+                    </button>
+                    <button class="db-btn">
+                        <i class="material-icons left">save</i>Сохранить базу
+                    </button>
+                    <button class="db-btn">
+                        <i class="material-icons left">file_download</i>Загрузить базу
+                    </button>
+                </div>
+                
+                <!-- Форма новой пациентки -->
+                <div x-show="showPatientForm" class="card-panel patient-form">
+                    <div class="patient-form-header">
+                        <h5>Новая пациентка</h5>
+                        <button @click="showPatientForm = false" class="close-detail">
+                            <i class="material-icons">close</i>
+                        </button>
+                    </div>
+                    
+                    <form @submit.prevent="savePatientToDatabase">
+                        <div class="input-field">
+                            <input id="newPatientFullName" type="text" x-model="newPatient.fullName" required>
+                            <label for="newPatientFullName">ФИО</label>
+                        </div>
+                        
+                        <div class="input-field" style="margin-top: 1.5rem;">
+                            <textarea id="newPatientDiagnosis" class="materialize-textarea" x-model="newPatient.diagnosis" rows="4"></textarea>
+                            <label for="newPatientDiagnosis">Диагноз</label>
+                        </div>
+                        
+                        <h6>Векторы анамнеза:</h6>
+                        <div class="vectors-grid">
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="newDiabetes" x-model="newPatient.diabetes">
+                                <label for="newDiabetes">Сахарный диабет</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="newAnemia" x-model="newPatient.anemia">
+                                <label for="newAnemia">Анемия</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="newHypertension" x-model="newPatient.hypertension">
+                                <label for="newHypertension">Хроническая гипертония</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="newPreeclampsia" x-model="newPatient.preeclampsia">
+                                <label for="newPreeclampsia">Преэклампсия</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="newInfections" x-model="newPatient.infections">
+                                <label for="newInfections">Инфекционные заболевания во время беременности</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="newMultiple" x-model="newPatient.multiple">
+                                <label for="newMultiple">Многоплодная беременность</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="newPlacenta" x-model="newPatient.placenta">
+                                <label for="newPlacenta">Патологии плаценты и пуповины</label>
+                            </div>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="newTerm" x-model="newPatient.term">
+                                <label for="newTerm">Срок беременности меньше 37 или больше 41 недели</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" @click="showPatientForm = false" class="btn-cancel">
+                                Отмена
+                            </button>
+                            <button type="submit" class="btn-save">
+                                Сохранить <i class="material-icons right">save</i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Детали пациентки -->
+                <div x-show="selectedPatient && !showPatientForm" class="patient-detail-card">
+                    <div class="patient-detail-header">
+                        <h5>Детали пациентки</h5>
+                        <button @click="selectedPatient = null" class="close-detail">
+                            <i class="material-icons">close</i>
+                        </button>
+                    </div>
+                    
+                    <!-- Кнопки управления пациенткой -->
+                    <div class="patient-detail-actions">
+                        <button @click="editPatient(selectedPatient)" class="btn-edit">
+                            <i class="material-icons left">edit</i>Редактировать
+                        </button>
+                        <button @click="deletePatient(selectedPatient.id)" class="btn-delete">
+                            <i class="material-icons left">delete</i>Удалить
+                        </button>
+                    </div>
+                    
+                    <div class="patient-info">
+                        <p><b>ФИО:</b> <span x-text="selectedPatient?.full_name"></span></p>
+                        <p><b>Диагноз:</b> <span x-text="selectedPatient?.diagnosis || 'не указан'"></span></p>
+                        
+                        <h6>Факторы векторизации КТГ:</h6>
+                        <div class="vectors-grid">
+                            <div class="checkbox-container" x-show="selectedPatient?.diabetes">
+                                <input type="checkbox" id="diabetes_detail" :checked="selectedPatient?.diabetes" disabled>
+                                <label for="diabetes_detail">Сахарный диабет</label>
+                            </div>
+                            <div class="checkbox-container" x-show="selectedPatient?.anemia">
+                                <input type="checkbox" id="anemia_detail" :checked="selectedPatient?.anemia" disabled>
+                                <label for="anemia_detail">Анемия</label>
+                            </div>
+                            <div class="checkbox-container" x-show="selectedPatient?.hypertension">
+                                <input type="checkbox" id="hypertension_detail" :checked="selectedPatient?.hypertension" disabled>
+                                <label for="hypertension_detail">Хроническая гипертония</label>
+                            </div>
+                            <div class="checkbox-container" x-show="selectedPatient?.preeclampsia">
+                                <input type="checkbox" id="preeclampsia_detail" :checked="selectedPatient?.preeclampsia" disabled>
+                                <label for="preeclampsia_detail">Преэклампсия</label>
+                            </div>
+                            <div class="checkbox-container" x-show="selectedPatient?.infections">
+                                <input type="checkbox" id="infections_detail" :checked="selectedPatient?.infections" disabled>
+                                <label for="infections_detail">Инфекционные заболевания во время беременности</label>
+                            </div>
+                            <div class="checkbox-container" x-show="selectedPatient?.multiple">
+                                <input type="checkbox" id="multiple_detail" :checked="selectedPatient?.multiple" disabled>
+                                <label for="multiple_detail">Многоплодная беременность</label>
+                            </div>
+                            <div class="checkbox-container" x-show="selectedPatient?.placenta">
+                                <input type="checkbox" id="placenta_detail" :checked="selectedPatient?.placenta" disabled>
+                                <label for="placenta_detail">Патологии плаценты и пуповины</label>
+                            </div>
+                            <div class="checkbox-container" x-show="selectedPatient?.term">
+                                <input type="checkbox" id="term_detail" :checked="selectedPatient?.term" disabled>
+                                <label for="term_detail">Срок беременности меньше 37 или больше 41 недели</label>
+                            </div>
+                        </div>
+                        
+                        <h6>Сессии анализа:</h6>
+                        <div class="sessions-list">
+                            <template x-for="session in (selectedPatient?.sessions || [])" :key="session.id">
+                                <div class="session-card">
+                                    <div class="session-header">
+                                        <h6>Сессия от <span x-text="new Date(session.session_date).toLocaleString('ru-RU')"></span></h6>
+                                        <div class="session-info-mini">
+                                            <span class="badge" x-show="session.fhr_file_path">FHR ✓</span>
+                                            <span class="badge" x-show="session.uc_file_path">UC ✓</span>
+                                            <span class="badge success" x-show="session.baseline_fhr">Анализ выполнен</span>
+                                        </div>
+                                        <div class="session-actions">
+                                            <button @click="viewSession(selectedPatient, session)" class="btn-view">
+                                                <i class="material-icons left">visibility</i>Просмотр
+                                            </button>
+                                            <button @click="await deleteSession(selectedPatient, session.id)" class="btn-delete-session">
+                                                <i class="material-icons left">delete</i>Удалить
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                            
+                            <div x-show="!selectedPatient?.sessions || selectedPatient?.sessions?.length === 0" class="empty-state">
+                                <i class="material-icons">event_busy</i>
+                                <p>Нет сохраненных сессий</p>
+                            </div>
+                        </div>
+                        
+                        <div class="new-session-section">
+                            <h6>Загрузить новую сессию:</h6>
+                            <div class="file-upload">
+                                <input type="file" @change="handleFileUpload($event, 'fhr')" accept=".csv">
+                                <i class="material-icons left">upload_file</i>Загрузить FHR данные
+                                <div x-show="uploadProgress.fhr > 0" class="upload-progress-bar">
+                                    <div class="upload-progress-fill" :style="`width: ${uploadProgress.fhr}%`"></div>
+                                </div>
+                            </div>
+                            <div class="file-upload" style="margin-left: 1rem;">
+                                <input type="file" @change="handleFileUpload($event, 'uc')" accept=".csv">
+                                <i class="material-icons left">upload_file</i>Загрузить UC данные
+                                <div x-show="uploadProgress.uc > 0" class="upload-progress-bar">
+                                    <div class="upload-progress-fill" :style="`width: ${uploadProgress.uc}%`"></div>
+                                </div>
+                            </div>
+                            
+                            <div x-show="uploadedFiles.fhr && uploadedFiles.uc" class="center-align" style="margin-top: 1.5rem;">
+                                <button @click="await createNewSession(selectedPatient)" class="btn waves-effect waves-light">
+                                    Создать сессию <i class="material-icons right">add</i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Список пациентов -->
+                <div x-show="!selectedPatient && !showPatientForm" class="search-container">
+                    <i class="material-icons search-icon">search</i>
+                    <input type="text" class="search-input" placeholder="Поиск по ФИО" x-model="searchQuery">
+                </div>
+                
+                <div x-show="!selectedPatient && !showPatientForm" class="row">
+                    <template x-for="patient in filteredPatients" :key="patient.id">
+                        <div class="col s12 m6">
+                            <div class="patient-card" @click="selectPatient(patient)">
+                                <h6 x-text="patient.full_name"></h6>
+                                <p x-show="patient.diagnosis"><b>Диагноз:</b> <span x-text="patient.diagnosis"></span></p>
+                                <div>
+                                    <span x-show="patient.diabetes" class="chip">Сахарный диабет</span>
+                                    <span x-show="patient.anemia" class="chip">Анемия</span>
+                                    <span x-show="patient.hypertension" class="chip">Хроническая гипертония</span>
+                                    <span x-show="patient.preeclampsia" class="chip">Преэклампсия</span>
+                                </div>
+                                <p class="session-date">Последняя сессия: <span x-text="patient.last_session || 'нет данных'"></span></p>
+                            </div>
+                        </div>
+                    </template>
+                    
+                    <div x-show="filteredPatients.length === 0" class="col s12">
+                        <div class="empty-state">
+                            <i class="material-icons">person_search</i>
+                            <p>Пациентки не найдены</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Модальное окно параметров анализа -->
+    <div class="modal" :class="{ 'modal-active': showAnalysisParams }">
+        <div class="modal-content">
+            <span class="close-modal" @click="showAnalysisParams = false">&times;</span>
+            <h5>Параметры анализа</h5>
+            
+            <h6>Эвристический модуль</h6>
+            <div class="checkbox-container">
+                <input type="checkbox" id="figoNice" x-model="analysisParams.figo_nice" checked>
+                <label for="figoNice">FIGO/NICE</label>
+            </div>
+            <div class="checkbox-container">
+                <input type="checkbox" id="nichdAcog" x-model="analysisParams.nichd_acog" checked>
+                <label for="nichdAcog">NICHD/ACOG</label>
+            </div>
+            
+            <h6>ИИ модуль</h6>
+            <div class="checkbox-container">
+                <input type="checkbox" id="aiModule" x-model="analysisParams.ai" checked>
+                <label for="aiModule">Использовать ИИ анализ</label>
+            </div>
+            
+            <div class="center-align" style="margin-top: 1.5rem;">
+                <button @click="applyAnalysisParams()" class="btn waves-effect waves-light">
+                    Применить <i class="material-icons right">check</i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно статистики КТГ -->
+    <div class="modal" :class="{ 'modal-active': showStatistics }">
+        <div class="modal-content">
+            <span class="close-modal" @click="showStatistics = false">&times;</span>
+            <h5>Статистика КТГ</h5>
+            
+            <div class="statistics-container">
+                <div class="statistics-item">
+                    <div class="statistics-value" x-text="ctgStatistics && ctgStatistics.accelerations ? ctgStatistics.accelerations : '0'"></div>
+                    <div class="statistics-label">Акселераций</div>
+                </div>
+                <div class="statistics-item">
+                    <div class="statistics-value" x-text="ctgStatistics && ctgStatistics.decelerations ? ctgStatistics.decelerations : '0'"></div>
+                    <div class="statistics-label">Децелераций</div>
+                </div>
+                <div class="statistics-item">
+                    <div class="statistics-value" x-text="ctgStatistics && ctgStatistics.variability ? (ctgStatistics.variability * 10).toFixed(1) : '0'"></div>
+                    <div class="statistics-label">Вариабельность (мс)</div>
+                </div>
+            </div>
+            
+            <div class="center-align" style="margin-top: 1.5rem;">
+                <button @click="showStatistics = false" class="btn waves-effect waves-light">
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function ctgApp() {
+            return {
+                currentPage: 'home',
+                showPatientForm: false,
+                showAnalysisParams: false,
+                showStatistics: false,
+                connectionStatus: false,
+                testDataRunning: false,
+                playbackSpeed: 1,
+                analysisData: null,
+                analysisProgress: 0,
+                alerts: [],
+                newPatient: {
+                    fullName: '',
+                    diagnosis: '',
+                    diabetes: false,
+                    anemia: false,
+                    hypertension: false,
+                    preeclampsia: false,
+                    infections: false,
+                    multiple: false,
+                    placenta: false,
+                    term: false
+                },
+                uploadedFiles: {
+                    fhr: null,
+                    uc: null
+                },
+                uploadProgress: {
+                    fhr: 0,
+                    uc: 0
+                },
+                fhrData: null,
+                ucData: null,
+                hypoxiaData: null,
+                analysisParams: {
+                    figo_nice: true,
+                    nichd_acog: true,
+                    ai: true
+                },
+                ctgStatistics: {
+                    accelerations: 0,
+                    decelerations: 0,
+                    variability: 0
+                },
+                patients: [],
+                API_BASE_URL: 'http://localhost:8000/api',
+                selectedPatient: null,
+                currentSession: null,
+                searchQuery: '',
+                
+                async init() {
+                    // Загрузка пациенток при инициализации
+                    await this.loadPatients();
+                    
+                    this.$nextTick(() => {
+                        if (this.currentPage === 'historical' && this.analysisData) {
+                            this.initCharts();
+                        }
+                    });
+                },
+                
+                // ========== API Methods ==========
+                
+                async loadPatients() {
+                    try {
+                        const response = await fetch(`${this.API_BASE_URL}/patients/`);
+                        if (response.ok) {
+                            const patients = await response.json();
+                            
+                            // Сессии уже загружены с пациентами через joinedload
+                            for (let patient of patients) {
+                                // Устанавливаем дату последней сессии
+                                if (patient.sessions && patient.sessions.length > 0) {
+                                    const lastSession = patient.sessions[0]; // уже отсортировано по дате
+                                    patient.last_session = new Date(lastSession.session_date).toLocaleString('ru-RU');
+                                }
+                            }
+                            
+                            this.patients = patients;
+                            console.log('✓ Пациентки загружены:', this.patients.length);
+                            console.log('✓ Всего сессий:', patients.reduce((sum, p) => sum + (p.sessions?.length || 0), 0));
+                        }
+                    } catch (error) {
+                        console.error('Ошибка загрузки пациенток:', error);
+                        alert('Не удалось загрузить список пациенток. Проверьте подключение к серверу.');
+                    }
+                },
+                
+                async apiCreatePatient(patientData) {
+                    try {
+                        const response = await fetch(`${this.API_BASE_URL}/patients/`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(patientData)
+                        });
+                        if (response.ok) {
+                            return await response.json();
+                        } else {
+                            const error = await response.json();
+                            throw new Error(error.detail || 'Ошибка создания пациентки');
+                        }
+                    } catch (error) {
+                        console.error('Ошибка API:', error);
+                        throw error;
+                    }
+                },
+                
+                async apiUpdatePatient(patientId, patientData) {
+                    try {
+                        const response = await fetch(`${this.API_BASE_URL}/patients/${patientId}`, {
+                            method: 'PUT',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(patientData)
+                        });
+                        if (response.ok) {
+                            return await response.json();
+                        }
+                    } catch (error) {
+                        console.error('Ошибка обновления:', error);
+                        throw error;
+                    }
+                },
+                
+                async apiDeletePatient(patientId) {
+                    try {
+                        const response = await fetch(`${this.API_BASE_URL}/patients/${patientId}`, {
+                            method: 'DELETE'
+                        });
+                        return response.ok;
+                    } catch (error) {
+                        console.error('Ошибка удаления:', error);
+                        return false;
+                    }
+                },
+                
+                async apiCreateSession(patientId) {
+                    try {
+                        const response = await fetch(`${this.API_BASE_URL}/sessions/`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({patient_id: patientId})
+                        });
+                        if (response.ok) {
+                            return await response.json();
+                        }
+                    } catch (error) {
+                        console.error('Ошибка создания сессии:', error);
+                        throw error;
+                    }
+                },
+                
+                async apiUploadFile(sessionId, file, fileType) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        
+                        const response = await fetch(
+                            `${this.API_BASE_URL}/sessions/${sessionId}/upload-${fileType}`,
+                            {
+                                method: 'POST',
+                                body: formData
+                            }
+                        );
+                        
+                        if (response.ok) {
+                            return await response.json();
+                        } else {
+                            const error = await response.json();
+                            throw new Error(error.detail || 'Ошибка загрузки файла');
+                        }
+                    } catch (error) {
+                        console.error('Ошибка загрузки файла:', error);
+                        throw error;
+                    }
+                },
+                
+                async apiDeleteSession(sessionId) {
+                    try {
+                        const response = await fetch(`${this.API_BASE_URL}/sessions/${sessionId}`, {
+                            method: 'DELETE'
+                        });
+                        if (response.ok) {
+                            return await response.json();
+                        } else {
+                            const error = await response.json();
+                            throw new Error(error.detail || 'Ошибка удаления сессии');
+                        }
+                    } catch (error) {
+                        console.error('Ошибка удаления сессии:', error);
+                        throw error;
+                    }
+                },
+                
+                async apiAnalyzeSession(sessionId, params) {
+                    try {
+                        const response = await fetch(
+                            `${this.API_BASE_URL}/analysis/${sessionId}/analyze`,
+                            {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify(params)
+                            }
+                        );
+                        
+                        if (response.ok) {
+                            return await response.json();
+                        } else {
+                            // Проверяем, является ли ответ JSON
+                            const contentType = response.headers.get('content-type');
+                            if (contentType && contentType.includes('application/json')) {
+                                const error = await response.json();
+                                throw new Error(error.detail || 'Ошибка анализа');
+                            } else {
+                                // Если ответ не JSON, читаем как текст
+                                const errorText = await response.text();
+                                throw new Error(`Ошибка сервера (${response.status}): ${errorText}`);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Ошибка анализа:', error);
+                        throw error;
+                    }
+                },
+                
+                async apiGetSessionData(sessionId) {
+                    try {
+                        const response = await fetch(`${this.API_BASE_URL}/sessions/${sessionId}/data`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            console.log('API вернул данные сессии:', data);
+                            return data;
+                        } else {
+                            const errorText = await response.text();
+                            throw new Error(`Сервер вернул ошибку ${response.status}: ${errorText}`);
+                        }
+                    } catch (error) {
+                        console.error('Ошибка получения данных сессии:', error);
+                        throw error;
+                    }
+                },
+                
+                async apiGetStatistics(sessionId) {
+                    try {
+                        const response = await fetch(`${this.API_BASE_URL}/analysis/${sessionId}/statistics`);
+                        if (response.ok) {
+                            return await response.json();
+                        }
+                    } catch (error) {
+                        console.error('Ошибка получения статистики:', error);
+                        throw error;
+                    }
+                },
+                
+                async apiGenerateReport(sessionId) {
+                    try {
+                        const response = await fetch(`${this.API_BASE_URL}/reports/`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({session_id: sessionId})
+                        });
+                        if (response.ok) {
+                            return await response.json();
+                        }
+                    } catch (error) {
+                        console.error('Ошибка генерации отчета:', error);
+                        throw error;
+                    }
+                },
+                
+                get filteredPatients() {
+                    if (!this.searchQuery) return this.patients;
+                    return this.patients.filter(patient => 
+                        patient.full_name.toLowerCase().includes(this.searchQuery.toLowerCase())
+                    );
+                },
+                
+                navigateTo(page) {
+                    // Очищаем данные при переходе между страницами, но сохраняем currentSession
+                    if (this.currentPage !== page) {
+                        this.clearAnalysisDataButKeepSession();
+                    }
+                    
+                    this.currentPage = page;
+                    this.$nextTick(() => {
+                        if (page === 'historical' && this.analysisData) {
+                            this.initCharts();
+                        } else if (page === 'monitoring' && this.connectionStatus) {
+                            this.startLiveMonitoring();
+                        }
+                    });
+                },
+                
+                clearAnalysisData() {
+                    // Очищаем все данные анализа
+                    this.analysisData = null;
+                    this.ctgStatistics = {
+                        accelerations: 0,
+                        decelerations: 0,
+                        variability: 0
+                    };
+                    this.hypoxiaData = [];
+                    this.fhrData = [];
+                    this.ucData = [];
+                    this.currentSession = null;
+                    this.selectedPatient = null;
+                    this.showPatientForm = false;
+                    this.uploadedFiles = {
+                        fhr: null,
+                        uc: null
+                    };
+                    this.uploadProgress = {
+                        fhr: 0,
+                        uc: 0
+                    };
+                    
+                    // Очищаем графики
+                    if (this.fhrChart) {
+                        this.fhrChart.destroy();
+                        this.fhrChart = null;
+                    }
+                    if (this.ucChart) {
+                        this.ucChart.destroy();
+                        this.ucChart = null;
+                    }
+                    if (this.hypoxiaChart) {
+                        this.hypoxiaChart.destroy();
+                        this.hypoxiaChart = null;
+                    }
+                },
+                
+                clearAnalysisDataButKeepSession() {
+                    // Очищаем данные анализа, но сохраняем currentSession
+                    this.analysisData = null;
+                    this.ctgStatistics = {
+                        accelerations: 0,
+                        decelerations: 0,
+                        variability: 0
+                    };
+                    this.hypoxiaData = [];
+                    this.fhrData = [];
+                    this.ucData = [];
+                    // НЕ сбрасываем this.currentSession = null;
+                    this.selectedPatient = null;
+                    this.showPatientForm = false;
+                    this.uploadedFiles = {
+                        fhr: null,
+                        uc: null
+                    };
+                    this.uploadProgress = {
+                        fhr: 0,
+                        uc: 0
+                    };
+                    
+                    // Очищаем графики
+                    if (this.fhrChart) {
+                        this.fhrChart.destroy();
+                        this.fhrChart = null;
+                    }
+                    if (this.ucChart) {
+                        this.ucChart.destroy();
+                        this.ucChart = null;
+                    }
+                    if (this.hypoxiaChart) {
+                        this.hypoxiaChart.destroy();
+                        this.hypoxiaChart = null;
+                    }
+                },
+                
+                toggleConnection() {
+                    this.connectionStatus = !this.connectionStatus;
+                    if (this.connectionStatus) {
+                        this.startLiveMonitoring();
+                    } else {
+                        this.stopLiveMonitoring();
+                    }
+                },
+                
+                async startTestData() {
+                    if (this.testDataRunning) return;
+                    
+                    try {
+                        this.testDataRunning = true;
+                        this.connectionStatus = true;
+                        
+                        // Инициализируем данные
+                        this.fhrData = [];
+                        this.ucData = [];
+                        this.hypoxiaData = [];
+                        this.analysisData = null;
+                        this.ctgStatistics = {
+                            accelerations: 0,
+                            decelerations: 0,
+                            variability: 0
+                        };
+                        
+                        console.log('Запуск тестовых данных...');
+                        
+                        // Запускаем генератор тестовых данных
+                        const response = await fetch(`${this.API_BASE_URL}/test-data/start`, {
+                            method: 'POST'
+                        });
+                        
+                        if (response.ok) {
+                            console.log('✓ Генератор тестовых данных запущен');
+                            
+                            // Запускаем цикл генерации данных
+                            this.startDataGenerationLoop();
+                        } else {
+                            throw new Error('Ошибка запуска генератора');
+                        }
+                    } catch (error) {
+                        console.error('Ошибка запуска тестовых данных:', error);
+                        this.testDataRunning = false;
+                        this.connectionStatus = false;
+                        alert('Ошибка запуска тестовых данных: ' + error.message);
+                    }
+                },
+                
+                async startDataGenerationLoop() {
+                    if (!this.testDataRunning) return;
+                    
+                    try {
+                        // Генерируем данные каждую секунду
+                        const response = await fetch(`${this.API_BASE_URL}/test-data/generate?duration=1.0`);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            
+                            // Инициализируем данные, если они пустые
+                            if (!this.fhrData) this.fhrData = [];
+                            if (!this.ucData) this.ucData = [];
+                            if (!this.hypoxiaData) this.hypoxiaData = [];
+                            
+                            // Добавляем новые данные к существующим (скользящее окно)
+                            this.fhrData = [...(this.fhrData || []), ...(data.fhr_data || [])];
+                            this.ucData = [...(this.ucData || []), ...(data.uc_data || [])];
+                            this.hypoxiaData = [...(this.hypoxiaData || []), ...(data.hypoxia_risk || [])];
+                            
+                            // Ограничиваем количество точек (последние 5 минут = 300 секунд * 4 Гц = 1200 точек)
+                            const maxPoints = 1200;
+                            if (this.fhrData.length > maxPoints) {
+                                this.fhrData = this.fhrData.slice(-maxPoints);
+                            }
+                            if (this.ucData.length > maxPoints) {
+                                this.ucData = this.ucData.slice(-maxPoints);
+                            }
+                            if (this.hypoxiaData.length > 100) { // Для риска гипоксии меньше точек
+                                this.hypoxiaData = this.hypoxiaData.slice(-100);
+                            }
+                            
+                            // Обновляем анализ
+                            this.analysisData = {
+                                fhrBase: data.baseline_fhr,
+                                variability: data.variability,
+                                status: this.determineStatus(data.baseline_fhr),
+                                lastUpdate: new Date().toLocaleTimeString(),
+                                forecast15min: { status: 'normal', text: 'Нормальное состояние' },
+                                forecast30min: { status: 'normal', text: 'Нормальное состояние' },
+                                forecast60min: { status: 'normal', text: 'Нормальное состояние' }
+                            };
+                            
+                            console.log('📊 Анализ обновлен:', this.analysisData);
+                            
+                            this.ctgStatistics = {
+                                accelerations: data.accelerations,
+                                decelerations: data.decelerations,
+                                variability: data.variability
+                            };
+                            
+                            // Обновляем графики
+                            console.log('🔄 Обновляем графики...');
+                            this.initCharts();
+                            
+                            // Вызываем анализ данных
+                            this.performTestDataAnalysis();
+                            
+                            console.log('✓ Данные обновлены:', {
+                                fhr_points: this.fhrData.length,
+                                uc_points: this.ucData.length,
+                                hypoxia_points: this.hypoxiaData.length,
+                                baseline: data.baseline_fhr,
+                                variability: data.variability
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Ошибка генерации данных:', error);
+                    }
+                    
+                    // Планируем следующее обновление
+                    if (this.testDataRunning) {
+                        setTimeout(() => this.startDataGenerationLoop(), 1000);
+                    }
+                },
+                
+                determineStatus(baseline) {
+                    if (baseline < 110) return 'bradycardia';
+                    if (baseline > 160) return 'tachycardia';
+                    return 'normal';
+                },
+                
+                async stopTestData() {
+                    try {
+                        this.testDataRunning = false;
+                        this.connectionStatus = false;
+                        
+                        const response = await fetch(`${this.API_BASE_URL}/test-data/stop`, {
+                            method: 'POST'
+                        });
+                        
+                        if (response.ok) {
+                            console.log('✓ Генератор тестовых данных остановлен');
+                            
+                            // Очищаем данные
+                            this.clearAnalysisData();
+                        }
+                    } catch (error) {
+                        console.error('Ошибка остановки тестовых данных:', error);
+                    }
+                },
+                
+                async performTestDataAnalysis() {
+                    try {
+                        // Вызываем API анализа тестовых данных
+                        const response = await fetch(`${this.API_BASE_URL}/test-data/analyze`);
+                        
+                        if (response.ok) {
+                            const analysisResult = await response.json();
+                            console.log('📈 Результат анализа тестовых данных:', analysisResult);
+                            
+                            // Извлекаем данные анализа из правильной структуры
+                            const analysis = analysisResult.analysis || analysisResult;
+                            
+                            // Обновляем данные анализа с результатами API
+                            this.analysisData = {
+                                fhrBase: analysis.fhr_base || analysis.baseline_fhr,
+                                variability: analysis.variability,
+                                status: this.determineStatus(analysis.fhr_base || analysis.baseline_fhr),
+                                lastUpdate: new Date().toLocaleTimeString(),
+                                forecast15min: analysis.forecast_15min || { status: 'normal', text: 'Нормальное состояние' },
+                                forecast30min: analysis.forecast_30min || { status: 'normal', text: 'Нормальное состояние' },
+                                forecast60min: analysis.forecast_60min || { status: 'normal', text: 'Нормальное состояние' }
+                            };
+                            
+                            this.ctgStatistics = {
+                                accelerations: analysis.accelerations || 0,
+                                decelerations: analysis.decelerations || 0,
+                                variability: analysis.variability || 0
+                            };
+                            
+                            // Обновляем данные риска гипоксии
+                            if (analysis.hypoxia_risk) {
+                                this.hypoxiaData = analysis.hypoxia_risk;
+                            }
+                            
+                            console.log('✅ Анализ тестовых данных обновлен:', {
+                                fhrBase: this.analysisData.fhrBase,
+                                variability: this.analysisData.variability,
+                                status: this.analysisData.status,
+                                accelerations: this.ctgStatistics.accelerations,
+                                decelerations: this.ctgStatistics.decelerations
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Ошибка анализа тестовых данных:', error);
+                    }
+                },
+                
+                setSpeed(speed) {
+                    this.playbackSpeed = speed;
+                    
+                    // Если есть активный интервал, перезапускаем с новой скоростью
+                    if (this.liveDataInterval) {
+                        this.stopLiveMonitoring();
+                        this.startLiveMonitoring();
+                    }
+                },
+                
+                startLiveMonitoring() {
+                    this.$nextTick(() => {
+                        // Сбрасываем данные графиков
+                        if (this.liveFhrChart) {
+                            this.liveFhrChart.destroy();
+                        }
+                        if (this.liveUcChart) {
+                            this.liveUcChart.destroy();
+                        }
+
+                        const commonOptions = {
+                            chart: {
+                                type: 'line',
+                                height: 130,
+                                animations: {
+                                    enabled: true,
+                                    easing: 'linear',
+                                    dynamicAnimation: {
+                                        speed: 1000
+                                    }
+                                },
+                                toolbar: {
+                                    show: false
+                                },
+                                parentHeightOffset: 0
+                            },
+                            stroke: {
+                                curve: 'smooth',
+                                width: 2
+                            },
+                            fill: {
+                                type: 'solid',
+                                opacity: 0.15
+                            },
+                            xaxis: {
+                                type: 'datetime',
+                                range: 60000, // 60 seconds
+                                labels: {
+                                    datetimeUTC: false,
+                                    format: 'HH:mm:ss'
+                                }
+                            },
+                            dataLabels: {
+                                enabled: false
+                            },
+                            tooltip: {
+                                x: {
+                                    format: 'HH:mm:ss'
+                                }
+                            },
+                            grid: {
+                                padding: {
+                                    top: 1,
+                                    right: 8,
+                                    bottom: 8,
+                                    left: 3
+                                }
+                            }
+                        };
+
+                        // FHR Chart
+                        const fhrOptions = {
+                            ...commonOptions,
+                            series: [{
+                                name: 'FHR (уд/мин)',
+                                data: []
+                            }],
+                            colors: ['#2196f3'],
+                            yaxis: {
+                                min: 50,
+                                max: 200,
+                                tickAmount: 6,
+                                labels: {
+                                    formatter: (value) => Math.round(value),
+                                    style: {
+                                        fontSize: '11px'
+                                    },
+                                    offsetX: 0
+                                }
+                            }
+                        };
+
+                        // UC Chart
+                        const ucOptions = {
+                            ...commonOptions,
+                            series: [{
+                                name: 'UC (мм рт. ст.)',
+                                data: []
+                            }],
+                            colors: ['#f44336'],
+                            yaxis: {
+                                min: 0,
+                                max: 100,
+                                tickAmount: 5,
+                                labels: {
+                                    formatter: (value) => Math.round(value),
+                                    style: {
+                                        fontSize: '11px'
+                                    },
+                                    offsetX: 0
+                                }
+                            }
+                        };
+
+                        this.liveFhrChart = new ApexCharts(document.querySelector("#fhrChart"), fhrOptions);
+                        this.liveUcChart = new ApexCharts(document.querySelector("#ucChart"), ucOptions);
+
+                        this.liveFhrChart.render();
+                        this.liveUcChart.render();
+                        
+                        // Сбрасываем статистику
+                        this.ctgStatistics = {
+                            accelerations: 0,
+                            decelerations: 0,
+                            variability: 0
+                        };
+                        
+                        // Определяем интервал в зависимости от скорости воспроизведения
+                        const interval = 1000 / this.playbackSpeed;
+                        
+                        this.liveDataInterval = setInterval(() => {
+                            const now = new Date().getTime();
+                            
+                            // Генерируем значения с учетом акселераций и децелераций
+                            let fhrValue = 120 + Math.random() * 20 - 10;
+                            
+                            // Случайно генерируем акселерации и децелерации
+                            if (Math.random() > 0.95) {
+                                // Акселерация
+                                fhrValue = 140 + Math.random() * 10;
+                                if (this.ctgStatistics) {
+                                this.ctgStatistics.accelerations++;
+                                }
+                            } else if (Math.random() < 0.05) {
+                                // Децелерация
+                                fhrValue = 100 + Math.random() * 10;
+                                if (this.ctgStatistics) {
+                                this.ctgStatistics.decelerations++;
+                                }
+                            }
+                            
+                            const ucValue = Math.random() * 30;
+                            
+                            // Рассчитываем вариабельность
+                            const fhrSeries = this.liveFhrChart.w.globals.series[0];
+                            if (fhrSeries && fhrSeries.length > 0 && this.ctgStatistics) {
+                                const lastFhr = fhrSeries[fhrSeries.length - 1];
+                                this.ctgStatistics.variability = Math.abs(fhrValue - lastFhr).toFixed(1);
+                            }
+                            
+                            // Добавляем новые точки
+                            this.liveFhrChart.appendData([{
+                                data: [[now, fhrValue]]
+                            }]);
+                            
+                            this.liveUcChart.appendData([{
+                                data: [[now, ucValue]]
+                            }]);
+                            
+                        }, interval);
+                    });
+                },
+                
+                stopLiveMonitoring() {
+                    if (this.liveDataInterval) {
+                        clearInterval(this.liveDataInterval);
+                    }
+                    this.testDataRunning = false;
+                },
+                
+                async handleFileUpload(event, type) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        this.uploadedFiles[type] = file;
+                        this.uploadProgress[type] = 0;
+                        console.log(`✓ Файл ${type.toUpperCase()} выбран:`, file.name);
+                        
+                        // Если есть активная сессия, загружаем сразу
+                        if (this.currentSession && this.currentSession.id) {
+                            try {
+                                this.uploadProgress[type] = 10;
+                                const result = await this.apiUploadFile(this.currentSession.id, file, type);
+                                this.uploadProgress[type] = 100;
+                                console.log(`✓ Файл ${type.toUpperCase()} загружен:`, result);
+                                alert(`Файл ${type.toUpperCase()} успешно загружен:\n- Точек данных: ${result.points_count}\n- Длительность: ${result.duration_seconds.toFixed(0)} сек`);
+                                
+                                // Сбрасываем прогресс через 2 секунды
+                                setTimeout(() => {
+                                    this.uploadProgress[type] = 0;
+                                }, 2000);
+                            } catch (error) {
+                                this.uploadProgress[type] = 0;
+                                alert(`Ошибка загрузки файла ${type.toUpperCase()}: ${error.message}`);
+                            }
+                        }
+                    }
+                },
+                
+                async submitNewPatient() {
+                    try {
+                        this.analysisProgress = 10;
+                        
+                        // Создаем пациентку в БД
+                        const patientData = {
+                            full_name: this.newPatient.fullName,
+                        diagnosis: this.newPatient.diagnosis,
+                        diabetes: this.newPatient.diabetes,
+                        anemia: this.newPatient.anemia,
+                        hypertension: this.newPatient.hypertension,
+                        preeclampsia: this.newPatient.preeclampsia,
+                        infections: this.newPatient.infections,
+                        multiple: this.newPatient.multiple,
+                        placenta: this.newPatient.placenta,
+                            term: this.newPatient.term
+                        };
+                        
+                        const patient = await this.apiCreatePatient(patientData);
+                        console.log('✓ Пациентка создана:', patient);
+                        this.analysisProgress = 30;
+                        
+                        // Создаем сессию
+                        const session = await this.apiCreateSession(patient.id);
+                        console.log('✓ Сессия создана:', session);
+                        this.currentSession = session;
+                        this.analysisProgress = 50;
+                        
+                        // Загружаем файлы
+                        if (this.uploadedFiles.fhr) {
+                            const fhrResult = await this.apiUploadFile(session.id, this.uploadedFiles.fhr, 'fhr');
+                            console.log('✓ FHR файл загружен:', fhrResult.points_count, 'точек');
+                        }
+                        this.analysisProgress = 70;
+                        
+                        if (this.uploadedFiles.uc) {
+                            const ucResult = await this.apiUploadFile(session.id, this.uploadedFiles.uc, 'uc');
+                            console.log('✓ UC файл загружен:', ucResult.points_count, 'точек');
+                        }
+                        this.analysisProgress = 85;
+                        
+                        // Анализируем
+                        const analysisResult = await this.apiAnalyzeSession(session.id, this.analysisParams);
+                        console.log('✓ Анализ выполнен:', analysisResult);
+                        
+                        this.analysisProgress = 100;
+                    this.showPatientForm = false;
+                    
+                        // Обновляем данные для отображения
+                        this.analysisData = {
+                            fhrBase: analysisResult.fhr_base,
+                            variability: analysisResult.variability,
+                            status: analysisResult.status,
+                            lastUpdate: new Date().toLocaleTimeString(),
+                            forecast15min: analysisResult.forecast_15min,
+                            forecast30min: analysisResult.forecast_30min,
+                            forecast60min: analysisResult.forecast_60min
+                        };
+                        
+                        this.ctgStatistics = analysisResult.statistics;
+                        
+                        // Загружаем данные для графиков
+                        const sessionData = await this.apiGetSessionData(session.id);
+                        this.fhrData = sessionData?.fhr_data || [];
+                        this.ucData = sessionData?.uc_data || [];
+                        this.hypoxiaData = analysisResult.hypoxia_risk || [];
+                        
+                        // Инициализируем графики
+                        this.initCharts();
+                        
+                        // Обновляем список пациенток БЕЗ сброса данных анализа
+                        // await this.loadPatients(); // Убрано - сбрасывает данные анализа
+                        
+                    } catch (error) {
+                        this.analysisProgress = 0;
+                        alert(`Ошибка: ${error.message}`);
+                        console.error(error);
+                    }
+                },
+                
+                async savePatient() {
+                    try {
+                        // Сохраняем пациентку в базу данных через API
+                        const patientData = {
+                            full_name: this.newPatient.fullName,
+                        diagnosis: this.newPatient.diagnosis,
+                        diabetes: this.newPatient.diabetes,
+                        anemia: this.newPatient.anemia,
+                        hypertension: this.newPatient.hypertension,
+                        preeclampsia: this.newPatient.preeclampsia,
+                        infections: this.newPatient.infections,
+                        multiple: this.newPatient.multiple,
+                        placenta: this.newPatient.placenta,
+                            term: this.newPatient.term
+                        };
+                        
+                        const patient = await this.apiCreatePatient(patientData);
+                        console.log('✓ Пациентка сохранена:', patient);
+                        
+                        // Обновляем список
+                        await this.loadPatients();
+                        
+                    this.showPatientForm = false;
+                    
+                    // Сбрасываем форму
+                    this.newPatient = {
+                        fullName: '',
+                        diagnosis: '',
+                        diabetes: false,
+                        anemia: false,
+                        hypertension: false,
+                        preeclampsia: false,
+                        infections: false,
+                        multiple: false,
+                        placenta: false,
+                        term: false
+                    };
+                    
+                    alert('Пациентка успешно сохранена в базу данных!');
+                    } catch (error) {
+                        alert(`Ошибка сохранения: ${error.message}`);
+                    }
+                },
+                
+                async savePatientToDatabase() {
+                    // Используем тот же метод savePatient
+                    await this.savePatient();
+                },
+                
+                generateMockAnalysisData() {
+                    return {
+                        fhrBase: 135,
+                        variability: 8.2,
+                        status: 'normal',
+                        lastUpdate: new Date().toLocaleTimeString(),
+                        forecast15min: { status: 'normal', text: 'Стабильное состояние' },
+                        forecast30min: { status: 'normal', text: 'Без изменений' },
+                        forecast60min: { status: 'warning', text: 'Возможны отклонения' }
+                    };
+                },
+                
+                initCharts() {
+                    
+                    // Используем данные из API
+                    if (!this.fhrData || !this.ucData) {
+                        return;
+                    }
+                    
+                    // Преобразуем данные для графиков (поддерживаем оба формата)
+                    // Нормализуем время относительно начала генерации
+                    const startTime = this.fhrData.length > 0 ? (this.fhrData[0].time_sec || this.fhrData[0].time || 0) : 0;
+                    
+                    const fhrSeries = this.fhrData.map(point => {
+                        const time = (point.time_sec || point.time || 0) - startTime;
+                        return [time * 1000, point.value];
+                    });
+                    const ucSeries = this.ucData.map(point => {
+                        const time = (point.time_sec || point.time || 0) - startTime;
+                        return [time * 1000, point.value];
+                    });
+                    const hypoxiaSeries = this.hypoxiaData && Array.isArray(this.hypoxiaData) ? 
+                        this.hypoxiaData.map(point => {
+                            const time = (point.time_sec || point.time || 0) - startTime;
+                            return [time * 1000, point.risk];
+                        }) : 
+                        [];
+                    
+
+                    const commonOptions = {
+                        chart: {
+                            type: 'line',
+                            height: 130,
+                            animations: {
+                                enabled: true,
+                                easing: 'linear',
+                                dynamicAnimation: {
+                                    speed: 1000
+                                }
+                            },
+                            toolbar: {
+                                show: false
+                            },
+                            parentHeightOffset: 0,
+                            sparkline: {
+                                enabled: false
+                            }
+                        },
+                        stroke: {
+                            curve: 'smooth',
+                            width: 2.5,
+                            lineCap: 'round'
+                        },
+                        fill: {
+                            type: 'none'
+                        },
+                        xaxis: {
+                            type: 'datetime',
+                            labels: {
+                                datetimeUTC: false,
+                                format: 'HH:mm:ss',
+                                style: {
+                                    fontSize: '11px',
+                                    fontWeight: 400
+                                },
+                                offsetY: 5
+                            },
+                            min: 0,
+                            max: undefined,
+                            axisBorder: {
+                                show: true,
+                                color: '#e0e0e0',
+                                height: 1
+                            }
+                        },
+                        axisTicks: {
+                            show: true,
+                            color: '#e0e0e0',
+                            height: 6
+                        },
+                        yaxis: {
+                            labels: {
+                                style: {
+                                    fontSize: '11px',
+                                    fontWeight: 400
+                                },
+                                offsetX: 0
+                            }
+                        },
+                        dataLabels: {
+                            enabled: false
+                        },
+                        tooltip: {
+                            x: {
+                                format: 'HH:mm:ss'
+                            }
+                        },
+                        grid: {
+                            show: true,
+                            borderColor: '#f1f1f1',
+                            strokeDashArray: 0,
+                            position: 'back',
+                            padding: {
+                                top: 1,
+                                right: 8,
+                                bottom: 8,
+                                left: 3
+                            }
+                        }
+                    };
+
+                    // FHR Chart
+                    const fhrOptions = {
+                        ...commonOptions,
+                        series: [{
+                            name: 'FHR (уд/мин)',
+                            data: fhrSeries
+                        }],
+                        chart: {
+                            ...commonOptions.chart,
+                            height: 130
+                        },
+                        colors: ['#2196f3'],
+                        yaxis: {
+                            min: 50,
+                            max: 200,
+                            tickAmount: 6,
+                            labels: {
+                                formatter: (value) => Math.round(value),
+                                style: {
+                                    fontSize: '11px'
+                                },
+                                offsetX: 0
+                            }
+                        }
+                    };
+
+                    // UC Chart
+                    const ucOptions = {
+                        ...commonOptions,
+                        series: [{
+                            name: 'UC (мм рт. ст.)',
+                            data: ucSeries
+                        }],
+                        chart: {
+                            ...commonOptions.chart,
+                            height: 130
+                        },
+                        colors: ['#f44336'],
+                        yaxis: {
+                            min: 0,
+                            max: 100,
+                            tickAmount: 5,
+                            labels: {
+                                formatter: (value) => Math.round(value),
+                                style: {
+                                    fontSize: '11px'
+                                },
+                                offsetX: 0
+                            }
+                        }
+                    };
+
+                    // Hypoxia Chart
+                    const hypoxiaOptions = {
+                        ...commonOptions,
+                        series: [{
+                            name: 'Риск гипоксии',
+                            data: hypoxiaSeries
+                        }],
+                        chart: {
+                            ...commonOptions.chart,
+                            height: 102
+                        },
+                        colors: ['#e91e63'],
+                        yaxis: {
+                            min: 0,
+                            max: 1,
+                            tickAmount: 4,
+                            labels: {
+                                formatter: (val) => val.toFixed(2),
+                                style: {
+                                    fontSize: '11px'
+                                },
+                                offsetX: 0
+                            }
+                        }
+                    };
+
+                    // Проверяем существование контейнеров (разные ID для разных страниц)
+                    let fhrContainer, ucContainer, hypoxiaContainer;
+                    
+                    if (this.currentPage === 'monitoring') {
+                        fhrContainer = document.querySelector("#monitoringFhrChart");
+                        ucContainer = document.querySelector("#monitoringUcChart");
+                        hypoxiaContainer = document.querySelector("#monitoringHypoxiaChart");
+                    } else {
+                        fhrContainer = document.querySelector("#fhrChart");
+                        ucContainer = document.querySelector("#ucChart");
+                        hypoxiaContainer = document.querySelector("#hypoxiaChart");
+                    }
+                    
+
+                    // Initialize charts
+                    if (this.fhrChart) this.fhrChart.destroy();
+                    if (this.ucChart) this.ucChart.destroy();
+                    if (this.hypoxiaChart) this.hypoxiaChart.destroy();
+
+                    if (fhrContainer) {
+                        this.fhrChart = new ApexCharts(fhrContainer, fhrOptions);
+                    this.fhrChart.render();
+                    }
+                    
+                    if (ucContainer) {
+                        this.ucChart = new ApexCharts(ucContainer, ucOptions);
+                    this.ucChart.render();
+                    }
+                    
+                    if (hypoxiaContainer) {
+                        this.hypoxiaChart = new ApexCharts(hypoxiaContainer, hypoxiaOptions);
+                    this.hypoxiaChart.render();
+                    }
+                },
+                
+                async applyAnalysisParams() {
+                    console.log('Применены параметры анализа:', this.analysisParams);
+                    this.showAnalysisParams = false;
+                    
+                    // Если есть активная сессия, выполняем анализ
+                    if (this.currentSession && this.currentSession.id) {
+                        try {
+                            this.analysisProgress = 10;
+                            
+                            const analysisResult = await this.apiAnalyzeSession(
+                                this.currentSession.id,
+                                this.analysisParams
+                            );
+                            
+                            this.analysisProgress = 80;
+                            
+                            // Обновляем данные
+                            this.analysisData = {
+                                fhrBase: analysisResult.fhr_base,
+                                variability: analysisResult.variability,
+                                status: analysisResult.status,
+                                lastUpdate: new Date().toLocaleTimeString(),
+                                forecast15min: analysisResult.forecast_15min,
+                                forecast30min: analysisResult.forecast_30min,
+                                forecast60min: analysisResult.forecast_60min
+                            };
+                            
+                            this.ctgStatistics = analysisResult.statistics;
+                            this.hypoxiaData = analysisResult.hypoxia_risk;
+                            
+                            this.analysisProgress = 100;
+                            
+                            // Обновляем графики
+                            this.$nextTick(() => {
+                                if (this.hypoxiaChart) {
+                                    this.initCharts();
+                                }
+                            });
+                            
+                            console.log('✓ Анализ выполнен');
+                            alert('Параметры анализа применены и анализ выполнен!');
+                        } catch (error) {
+                            this.analysisProgress = 0;
+                            alert(`Ошибка анализа: ${error.message}`);
+                            console.error(error);
+                        }
+                    } else {
+                        // Если нет активной сессии, просто сохраняем параметры
+                        console.log('✓ Параметры анализа сохранены (нет активной сессии)');
+                        alert('Параметры анализа сохранены. Они будут применены при следующем анализе.');
+                    }
+                },
+                
+                selectPatient(patient) {
+                    this.selectedPatient = patient;
+                },
+                
+                async editPatient(patient) {
+                    // Заполняем форму данными пациентки для редактирования
+                    this.newPatient = {
+                        fullName: patient.full_name,
+                        diagnosis: patient.diagnosis,
+                        diabetes: patient.diabetes,
+                        anemia: patient.anemia,
+                        hypertension: patient.hypertension,
+                        preeclampsia: patient.preeclampsia,
+                        infections: patient.infections,
+                        multiple: patient.multiple,
+                        placenta: patient.placenta,
+                        term: patient.term
+                    };
+                    
+                    // Открываем форму
+                    this.showPatientForm = true;
+                    
+                    // Запоминаем, что это редактирование
+                    this.editingPatientId = patient.id;
+                },
+                
+                async deletePatient(patientId) {
+                    if (confirm('Вы уверены, что хотите удалить эту пациентку?')) {
+                        try {
+                            const success = await this.apiDeletePatient(patientId);
+                        
+                            if (success) {
+                        // Если удаленная пациентка была выбрана, сбрасываем выбор
+                        if (this.selectedPatient && this.selectedPatient.id === patientId) {
+                            this.selectedPatient = null;
+                        }
+                                
+                                // Обновляем список
+                                await this.loadPatients();
+                        
+                        alert('Пациентка успешно удалена!');
+                            } else {
+                                alert('Не удалось удалить пациентку');
+                            }
+                        } catch (error) {
+                            alert(`Ошибка удаления: ${error.message}`);
+                        }
+                    }
+                },
+                
+                async viewSession(patient, session) {
+                    try {
+                    
+                    // Устанавливаем текущую сессию
+                    this.currentSession = session;
+                    
+                    // Устанавливаем данные пациента
+                    this.newPatient = {
+                            fullName: patient.full_name,
+                        diagnosis: patient.diagnosis,
+                        diabetes: patient.diabetes,
+                        anemia: patient.anemia,
+                        hypertension: patient.hypertension,
+                        preeclampsia: patient.preeclampsia,
+                        infections: patient.infections,
+                        multiple: patient.multiple,
+                        placenta: patient.placenta,
+                        term: patient.term
+                    };
+                    
+                    // Переходим на страницу анализа
+                    this.navigateTo('historical');
+                    
+                        // Загружаем данные сессии
+                        const sessionData = await this.apiGetSessionData(session.id);
+                        console.log('✓ Данные сессии загружены:', sessionData);
+                        
+                        // Проверяем наличие данных
+                        if (!sessionData) {
+                            throw new Error('Данные сессии не получены от сервера');
+                        }
+                        
+                        // Проверяем, есть ли результаты анализа в сессии
+                        const hasAnalysisResults = session.baseline_fhr !== null && session.baseline_fhr !== undefined;
+                        
+                        if (!hasAnalysisResults) {
+                            
+                            // Выполняем анализ сессии
+                            try {
+                                const analysisResult = await this.apiAnalyzeSession(session.id, this.analysisParams);
+                                
+                                // Обновляем данные анализа с результатами API
+                                this.analysisData = {
+                                    fhrBase: analysisResult.fhr_base,
+                                    variability: analysisResult.variability,
+                                    status: analysisResult.status,
+                                    lastUpdate: new Date().toLocaleTimeString(),
+                                    forecast15min: analysisResult.forecast_15min,
+                                    forecast30min: analysisResult.forecast_30min,
+                                    forecast60min: analysisResult.forecast_60min
+                                };
+                                
+                                this.ctgStatistics = analysisResult.statistics;
+                                this.hypoxiaData = analysisResult.hypoxia_risk || [];
+                                
+                            } catch (error) {
+                                console.error('❌ Ошибка выполнения анализа:', error);
+                                // Используем данные по умолчанию
+                                this.analysisData = {
+                                    fhrBase: 0,
+                                    variability: 0,
+                                    status: 'normal',
+                                    lastUpdate: new Date(session.session_date).toLocaleTimeString(),
+                                    forecast15min: {status: 'normal', text: 'Ошибка анализа'},
+                                    forecast30min: {status: 'normal', text: 'Ошибка анализа'},
+                                    forecast60min: {status: 'normal', text: 'Ошибка анализа'}
+                                };
+                                this.ctgStatistics = {accelerations: 0, decelerations: 0, variability: 0};
+                                this.hypoxiaData = [];
+                            }
+                        } else {
+                            // Формируем данные анализа из сессии
+                            this.analysisData = {
+                                fhrBase: session.baseline_fhr || 0,
+                                variability: session.variability || 0,
+                                status: session.status || 'normal',
+                                lastUpdate: new Date(session.session_date).toLocaleTimeString(),
+                                forecast15min: session.forecast_15min || {status: 'normal', text: 'Нет данных'},
+                                forecast30min: session.forecast_30min || {status: 'normal', text: 'Нет данных'},
+                                forecast60min: session.forecast_60min || {status: 'normal', text: 'Нет данных'}
+                            };
+                        }
+                        
+                        // Парсим JSON поля если они пришли как строки
+                        if (typeof session.forecast_15min === 'string') {
+                            try {
+                                this.analysisData.forecast15min = JSON.parse(session.forecast_15min);
+                            } catch (e) {
+                                console.warn('Ошибка парсинга forecast_15min:', e);
+                            }
+                        }
+                        if (typeof session.forecast_30min === 'string') {
+                            try {
+                                this.analysisData.forecast30min = JSON.parse(session.forecast_30min);
+                            } catch (e) {
+                                console.warn('Ошибка парсинга forecast_30min:', e);
+                            }
+                        }
+                        if (typeof session.forecast_60min === 'string') {
+                            try {
+                                this.analysisData.forecast60min = JSON.parse(session.forecast_60min);
+                            } catch (e) {
+                                console.warn('Ошибка парсинга forecast_60min:', e);
+                            }
+                        }
+                        
+                        // Устанавливаем статистику КТГ только если она не была установлена выше
+                        if (!this.ctgStatistics || this.ctgStatistics.accelerations === 0) {
+                            this.ctgStatistics = {
+                                accelerations: session.accelerations_count || 0,
+                                decelerations: session.decelerations_count || 0,
+                                variability: session.variability || 0
+                            };
+                        }
+                        
+                        // Безопасное присвоение данных
+                        this.fhrData = sessionData.fhr_data || [];
+                        this.ucData = sessionData.uc_data || [];
+                        
+                        // Парсим данные риска гипоксии только если они не были установлены выше
+                        if (!this.hypoxiaData || this.hypoxiaData.length === 0) {
+                            if (typeof session.hypoxia_risk === 'string') {
+                                try {
+                                    this.hypoxiaData = JSON.parse(session.hypoxia_risk);
+                                } catch (e) {
+                                    console.warn('Ошибка парсинга hypoxia_risk:', e);
+                                    this.hypoxiaData = [];
+                                }
+                            } else if (Array.isArray(session.hypoxia_risk)) {
+                                // Если это уже массив, копируем его
+                                this.hypoxiaData = [...session.hypoxia_risk];
+                            } else {
+                                this.hypoxiaData = [];
+                            }
+                        }
+                        
+                    
+                    // Инициализируем графики
+                    this.$nextTick(() => {
+                        this.initCharts();
+                    });
+                    } catch (error) {
+                        alert(`Ошибка загрузки сессии: ${error.message}`);
+                        console.error('Полная ошибка:', error);
+                    }
+                },
+                
+                async deleteSession(patient, sessionId) {
+                    if (confirm('Вы уверены, что хотите удалить эту сессию?')) {
+                        try {
+                            // Удаляем сессию через API
+                            await this.apiDeleteSession(sessionId);
+                            
+                            // Удаляем сессию из локальных данных
+                            if (patient.sessions) {
+                                patient.sessions = patient.sessions.filter(s => s.id !== sessionId);
+                            }
+                            
+                            // Обновляем дату последней сессии
+                            if (patient.sessions && patient.sessions.length > 0) {
+                                const lastSession = patient.sessions[0];
+                                patient.last_session = new Date(lastSession.session_date).toLocaleString('ru-RU');
+                            } else {
+                                patient.last_session = null;
+                            }
+                            
+                            // Если удаляемая сессия была текущей, сбрасываем
+                            if (this.currentSession && this.currentSession.id === sessionId) {
+                                this.currentSession = null;
+                                this.analysisData = null;
+                                this.fhrData = null;
+                                this.ucData = null;
+                                this.hypoxiaData = null;
+                                
+                                // Возвращаемся на главную страницу
+                                this.navigateTo('home');
+                            }
+                            
+                            alert('Сессия успешно удалена!');
+                        } catch (error) {
+                            alert(`Ошибка удаления сессии: ${error.message}`);
+                        }
+                    }
+                },
+                
+                async createNewSession(patient) {
+                    try {
+                        // Создаем сессию через API
+                        const session = await this.apiCreateSession(patient.id);
+                        console.log('✓ Новая сессия создана:', session);
+                        
+                        // Устанавливаем как текущую сессию
+                        this.currentSession = session;
+                        
+                        // Добавляем сессию к пациентке в локальных данных
+                    if (!patient.sessions) {
+                        patient.sessions = [];
+                    }
+                        patient.sessions.unshift(session); // Добавляем в начало списка
+                    
+                    // Обновляем последнюю сессию
+                        patient.last_session = new Date(session.session_date).toLocaleString('ru-RU');
+                        
+                        // Загружаем файлы если они выбраны
+                        let filesUploaded = 0;
+                        
+                        if (this.uploadedFiles.fhr) {
+                            try {
+                                this.uploadProgress.fhr = 10;
+                                const fhrResult = await this.apiUploadFile(session.id, this.uploadedFiles.fhr, 'fhr');
+                                this.uploadProgress.fhr = 100;
+                                console.log('✓ FHR файл загружен:', fhrResult.points_count, 'точек');
+                                alert(`FHR файл успешно загружен:\n- Точек данных: ${fhrResult.points_count}\n- Длительность: ${fhrResult.duration_seconds.toFixed(0)} сек`);
+                                filesUploaded++;
+                                
+                                setTimeout(() => {
+                                    this.uploadProgress.fhr = 0;
+                                }, 2000);
+                            } catch (error) {
+                                this.uploadProgress.fhr = 0;
+                                console.error('Ошибка загрузки FHR файла:', error);
+                                alert(`Ошибка загрузки FHR файла: ${error.message}`);
+                            }
+                        }
+                        
+                        if (this.uploadedFiles.uc) {
+                            try {
+                                this.uploadProgress.uc = 10;
+                                const ucResult = await this.apiUploadFile(session.id, this.uploadedFiles.uc, 'uc');
+                                this.uploadProgress.uc = 100;
+                                console.log('✓ UC файл загружен:', ucResult.points_count, 'точек');
+                                alert(`UC файл успешно загружен:\n- Точек данных: ${ucResult.points_count}\n- Длительность: ${ucResult.duration_seconds.toFixed(0)} сек`);
+                                filesUploaded++;
+                                
+                                setTimeout(() => {
+                                    this.uploadProgress.uc = 0;
+                                }, 2000);
+                            } catch (error) {
+                                this.uploadProgress.uc = 0;
+                                console.error('Ошибка загрузки UC файла:', error);
+                                alert(`Ошибка загрузки UC файла: ${error.message}`);
+                            }
+                        }
+                        
+                        // Если загружены оба файла, выполняем анализ
+                        if (filesUploaded >= 2) {
+                            try {
+                                console.log('✓ Запускаем анализ сессии...');
+                                const analysisResult = await this.apiAnalyzeSession(session.id, this.analysisParams);
+                                console.log('✓ Анализ выполнен:', analysisResult);
+                                
+                                // Обновляем данные анализа
+                                this.analysisData = {
+                                    fhrBase: analysisResult.fhr_base,
+                                    variability: analysisResult.variability,
+                                    status: analysisResult.status,
+                                    lastUpdate: new Date().toLocaleTimeString(),
+                                    forecast15min: analysisResult.forecast_15min,
+                                    forecast30min: analysisResult.forecast_30min,
+                                    forecast60min: analysisResult.forecast_60min
+                                };
+                                
+                                this.ctgStatistics = analysisResult.statistics;
+                                this.hypoxiaData = analysisResult.hypoxia_risk;
+                                
+                                // Загружаем данные для графиков
+                                const sessionData = await this.apiGetSessionData(session.id);
+                                this.fhrData = sessionData?.fhr_data || [];
+                                this.ucData = sessionData?.uc_data || [];
+                                
+                                // Обновляем currentSession с результатами анализа
+                                this.currentSession = {
+                                    ...session,
+                                    baseline_fhr: analysisResult.fhr_base,
+                                    variability: analysisResult.variability,
+                                    status: analysisResult.status,
+                                    accelerations_count: analysisResult.accelerations,
+                                    decelerations_count: analysisResult.decelerations,
+                                    forecast_15min: JSON.stringify(analysisResult.forecast_15min),
+                                    forecast_30min: JSON.stringify(analysisResult.forecast_30min),
+                                    forecast_60min: JSON.stringify(analysisResult.forecast_60min),
+                                    hypoxia_risk: JSON.stringify(analysisResult.hypoxia_risk)
+                                };
+                                
+                                // Обновляем графики
+                                this.initCharts();
+                                
+                                console.log('✓ Графики обновлены');
+                                console.log('✓ Данные анализа сохранены в currentSession');
+                                
+                            } catch (error) {
+                                console.error('Ошибка анализа:', error);
+                                alert(`Ошибка анализа: ${error.message}`);
+                            }
+                        }
+                    
+                    // Сбрасываем загруженные файлы
+                    this.uploadedFiles = {
+                        fhr: null,
+                        uc: null
+                    };
+                    
+                    // Показываем уведомление
+                        if (filesUploaded >= 2) {
+                            alert(`Новая сессия успешно создана! Загружено файлов: ${filesUploaded}. Анализ выполнен автоматически.`);
+                            
+                            // Принудительно обновляем данные после alert
+                            setTimeout(() => {
+                                if (this.currentSession && this.analysisData) {
+                                    console.log('✓ Принудительное обновление данных после alert');
+                                    this.initCharts();
+                                }
+                            }, 100);
+                        } else if (filesUploaded > 0) {
+                            alert(`Новая сессия успешно создана! Загружено файлов: ${filesUploaded}. Загрузите второй файл для автоматического анализа.`);
+                        } else {
+                            alert('Новая сессия успешно создана! Теперь загрузите FHR и UC файлы.');
+                        }
+                        
+                        // Остаемся на странице с сессиями (не переходим на historical)
+                        // this.navigateTo('historical'); // Убрано
+                        
+                    } catch (error) {
+                        console.error('Ошибка создания сессии:', error);
+                        alert(`Ошибка создания сессии: ${error.message}`);
+                    }
+                },
+                
+                async performSessionAnalysis() {
+                    console.log('🔍 Текущая сессия:', this.currentSession);
+                    console.log('🔍 ID сессии:', this.currentSession?.id);
+                    
+                    if (!this.currentSession || !this.currentSession.id) {
+                        alert('Нет активной сессии для анализа. Попробуйте сначала выбрать сессию для просмотра.');
+                        return;
+                    }
+                    
+                    try {
+                        console.log('🔄 Выполняем анализ сессии...');
+                        this.analysisProgress = 10;
+                        
+                        const analysisResult = await this.apiAnalyzeSession(this.currentSession.id, this.analysisParams);
+                        console.log('✅ Анализ выполнен:', analysisResult);
+                        console.log('🔍 Прогноз 15мин:', analysisResult.forecast_15min);
+                        console.log('🔍 Прогноз 30мин:', analysisResult.forecast_30min);
+                        console.log('🔍 Прогноз 60мин:', analysisResult.forecast_60min);
+                        console.log('🔍 Есть ли hypoxia_risk в 15мин:', analysisResult.forecast_15min?.hypoxia_risk);
+                        console.log('🔍 Есть ли hypoxia_risk в 30мин:', analysisResult.forecast_30min?.hypoxia_risk);
+                        console.log('🔍 Есть ли hypoxia_risk в 60мин:', analysisResult.forecast_60min?.hypoxia_risk);
+                        
+                        this.analysisProgress = 80;
+                        
+                        // Обновляем данные анализа
+                        this.analysisData = {
+                            fhrBase: analysisResult.fhr_base,
+                            variability: analysisResult.variability,
+                            status: analysisResult.status,
+                            lastUpdate: new Date().toLocaleTimeString(),
+                            forecast15min: analysisResult.forecast_15min,
+                            forecast30min: analysisResult.forecast_30min,
+                            forecast60min: analysisResult.forecast_60min
+                        };
+                        
+                        this.ctgStatistics = analysisResult.statistics;
+                        this.hypoxiaData = analysisResult.hypoxia_risk || [];
+                        
+                        this.analysisProgress = 100;
+                        
+                        // Обновляем графики
+                        this.$nextTick(() => {
+                            this.initCharts();
+                        });
+                        
+                        console.log('✅ Анализ завершен успешно');
+                        alert('Анализ выполнен успешно!');
+                        
+                    } catch (error) {
+                        this.analysisProgress = 0;
+                        console.error('❌ Ошибка анализа:', error);
+                        alert(`Ошибка выполнения анализа: ${error.message}`);
+                    }
+                },
+                
+                async generateReport() {
+                    if (!this.currentSession || !this.currentSession.id) {
+                        alert('Нет активной сессии для генерации отчета');
+                        return;
+                    }
+                    
+                    try {
+                        const report = await this.apiGenerateReport(this.currentSession.id);
+                        console.log('✓ Отчет сгенерирован:', report);
+                        
+                        // Открываем отчет в новом окне
+                        const reportUrl = `${this.API_BASE_URL}/reports/${report.id}/download`;
+                        window.open(reportUrl, '_blank');
+                        
+                        alert('Отчет успешно сгенерирован!');
+                    } catch (error) {
+                        alert(`Ошибка генерации отчета: ${error.message}`);
+                        console.error(error);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

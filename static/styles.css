@@ -1,0 +1,1423 @@
+:root {
+    --primary-color: #1976d2;
+    --secondary-color: #ff5722;
+    --success-color: #4caf50;
+    --warning-color: #ff9800;
+    --danger-color: #f44336;
+    --light-bg: #f5f7fa;
+    --card-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    --button-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    --button-hover-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--light-bg);
+    font-family: 'Roboto', sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+.content-container {
+    flex: 1;
+    padding: 0.5rem;
+    max-width: 1600px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.card-panel {
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 0.5rem;
+    padding: 0.8rem;
+    background-color: white;
+}
+
+.charts-panel {
+    padding-top: 0.5rem;
+}
+
+.chart-container {
+    position: relative;
+    height: auto;
+    min-height: 150px;
+    width: 100%;
+    margin-bottom: 0.3rem;
+    box-sizing: border-box;
+    padding: 6px 10px 5px 10px;
+    overflow: visible;
+}
+
+.chart-container > div {
+    width: 100% !important;
+    overflow: visible !important;
+}
+
+.hypoxia-chart {
+    min-height: 120px !important;
+    height: auto !important;
+    position: relative;
+}
+
+.chart-title {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 0.05rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    color: #9c27b0;
+    font-weight: 500;
+    z-index: 10;
+    text-align: center;
+}
+
+/* ApexCharts специальные стили для предотвращения обрезки */
+.apexcharts-canvas {
+    overflow: visible !important;
+}
+
+.apexcharts-svg {
+    overflow: visible !important;
+}
+
+.apexcharts-xaxis,
+.apexcharts-yaxis {
+    overflow: visible !important;
+}
+
+.info-block {
+    background-color: white;
+    border-radius: 8px;
+    padding: 0.6rem;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    font-size: 0.9rem;
+}
+
+.info-block p {
+    margin: 0.3rem 0;
+}
+
+.status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.status-connected {
+    background-color: var(--success-color);
+    box-shadow: 0 0 8px var(--success-color);
+}
+
+.status-disconnected {
+    background-color: var(--danger-color);
+}
+
+.status-forecast {
+    background-color: white;
+}
+
+.forecast-card {
+    border-left: 4px solid;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.forecast-card p {
+    margin: 0;
+}
+
+.forecast-normal {
+    border-left-color: var(--success-color);
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.forecast-warning {
+    border-left-color: var(--warning-color);
+    background-color: rgba(255, 152, 0, 0.1);
+}
+
+.forecast-danger {
+    border-left-color: var(--danger-color);
+    background-color: rgba(244, 67, 54, 0.1);
+}
+
+.analysis-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.analysis-btn {
+    background-color: #e3f2fd;
+    color: var(--primary-color);
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    border: 1px solid #bbdefb;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.analysis-btn:hover {
+    background-color: #bbdefb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-active {
+    display: flex !important;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.close-modal {
+    float: right;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #aaa;
+}
+
+.close-modal:hover {
+    color: #333;
+}
+
+.patient-card {
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    background-color: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.patient-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.session-date {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.analysis-progress {
+    height: 6px;
+    background-color: #e0e0e0;
+    border-radius: 3px;
+    margin-top: 1rem;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--primary-color);
+    width: 0%;
+    transition: width 0.3s;
+}
+
+.file-upload {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    overflow: hidden;
+    background-color: #e3f2fd;
+    color: var(--primary-color);
+    padding: 0.7rem 1.5rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.file-upload:hover {
+    background-color: #bbdefb;
+}
+
+.file-upload input[type=file] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.checkbox-container input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+.search-container {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 3rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+}
+
+.db-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.db-btn {
+    background-color: #e8f5e9;
+    color: var(--success-color);
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    border: 1px solid #c8e6c9;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.db-btn:hover {
+    background-color: #c8e6c9;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #999;
+}
+
+.empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    color: #ccc;
+}
+
+/* Компактное меню для внутренних страниц */
+.compact-menu-btn {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+}
+
+.menu-toggle {
+    background-color: white;
+    border: none;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.menu-toggle:hover {
+    background-color: #f5f5f5;
+    transform: scale(1.05);
+}
+
+.menu-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    min-width: 220px;
+    z-index: 100;
+    overflow: hidden;
+}
+
+.menu-item {
+    display: block;
+    padding: 0.8rem 1.2rem;
+    color: #333;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.menu-item:hover {
+    background-color: #f5f5f5;
+}
+
+.menu-item.active {
+    background-color: #e3f2fd;
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+/* Кнопка настроек */
+.settings-btn {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1000;
+}
+
+.settings-toggle {
+    background-color: white;
+    border: none;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.settings-toggle:hover {
+    background-color: #f5f5f5;
+    transform: scale(1.05);
+}
+
+.settings-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 0.5rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    min-width: 220px;
+    z-index: 100;
+    overflow: hidden;
+}
+
+.settings-item {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1.2rem;
+    color: #333;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.settings-item:hover {
+    background-color: #f5f5f5;
+}
+
+.settings-item i {
+    margin-right: 0.8rem;
+}
+
+/* Главная страница */
+.home-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 1rem;
+}
+
+.main-card {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: var(--button-shadow);
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Компактная шапка */
+.main-header-compact {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.logo-container-compact {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.app-title-compact {
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+}
+
+/* Основные кнопки */
+.main-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 2rem 1.5rem;
+    flex-wrap: wrap;
+}
+
+.main-button {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 200px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.main-button:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--button-hover-shadow);
+    border-color: var(--primary-color);
+}
+
+.button-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.8rem;
+}
+
+.blue-bg {
+    background-color: rgba(25, 118, 210, 0.1);
+    color: var(--primary-color);
+}
+
+.teal-bg {
+    background-color: rgba(0, 150, 136, 0.1);
+    color: #009688;
+}
+
+.green-bg {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: var(--success-color);
+}
+
+.button-icon i {
+    font-size: 2rem !important;
+}
+
+.main-button h5 {
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-size: 1rem;
+}
+
+.main-button p {
+    color: #666;
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+/* Компактный футер */
+.main-footer-compact {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.footer-links-compact {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.footer-link-compact {
+    display: flex;
+    align-items: center;
+    color: #666;
+    text-decoration: none;
+    transition: color 0.2s;
+    font-size: 0.9rem;
+}
+
+.footer-link-compact:hover {
+    color: var(--primary-color);
+}
+
+.footer-link-compact i {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+/* Информационные блоки */
+.info-col {
+    width: 300px;
+    min-width: 250px;
+    max-width: 50%;
+    flex-shrink: 0;
+}
+
+.charts-col {
+    flex: 1 1 auto;
+    min-width: 300px;
+}
+
+/* Стили для статуса */
+.status-text {
+    font-size: 1rem;
+    font-weight: 500;
+    margin: 0.5rem 0;
+}
+
+/* Стили для сетки */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -0.75rem;
+    margin-left: -0.75rem;
+}
+
+.col {
+    padding: 0 0.75rem;
+    box-sizing: border-box;
+}
+
+/* Для средних экранов и выше */
+@media only screen and (min-width: 601px) {
+    .m8 {
+        width: 66.6666666667%;
+        margin-left: auto;
+        left: auto;
+        right: auto;
+    }
+    
+    .m4 {
+        width: 33.3333333333%;
+        margin-left: auto;
+        left: auto;
+        right: auto;
+    }
+}
+
+/* Для больших экранов */
+@media only screen and (min-width: 993px) {
+    .l9 {
+        width: 75%;
+        margin-left: auto;
+        left: auto;
+        right: auto;
+    }
+    
+    .l3 {
+        width: 25%;
+        margin-left: auto;
+        left: auto;
+        right: auto;
+    }
+}
+
+/* Адаптивность для ноутбуков 1366x768 */
+@media only screen and (min-width: 1200px) and (max-height: 800px) {
+    .content-container {
+        max-width: 1800px;
+        padding: 0.3rem;
+    }
+    
+    .chart-container {
+        min-height: 130px;
+        height: auto;
+        margin-bottom: 0.2rem;
+        padding: 5px 8px 3px 8px;
+    }
+    
+    .hypoxia-chart {
+        min-height: 108px !important;
+        height: auto !important;
+    }
+    
+    .info-block {
+        padding: 0.4rem;
+        margin-bottom: 0.3rem;
+    }
+    
+    .forecast-card {
+        padding: 0.3rem;
+        margin-bottom: 0.3rem;
+    }
+}
+
+/* Адаптивность для 1920x1080 */
+@media only screen and (min-width: 1200px) {
+    .content-container {
+        max-width: 1800px;
+    }
+    
+    .chart-container {
+        min-height: 140px;
+        height: auto;
+    }
+    
+    .hypoxia-chart {
+        min-height: 120px !important;
+        height: auto !important;
+    }
+    
+    .main-buttons {
+        gap: 2rem;
+    }
+    
+    .main-button {
+        width: 220px;
+    }
+}
+
+@media only screen and (min-width: 1600px) {
+    .content-container {
+        max-width: 1920px;
+        padding: 0.8rem;
+    }
+    
+    .chart-container {
+        min-height: 150px;
+        height: auto;
+    }
+    
+    .hypoxia-chart {
+        min-height: 132px !important;
+        height: auto !important;
+    }
+    
+    .main-buttons {
+        gap: 2.5rem;
+    }
+    
+    .main-button {
+        width: 240px;
+    }
+}
+
+/* Мобильная адаптивность */
+@media (max-width: 992px) {
+    .content-container {
+        padding: 0.5rem;
+    }
+    
+    .info-col {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-buttons {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .main-button {
+        width: 100%;
+        max-width: 280px;
+    }
+    
+    .chart-container {
+        min-height: 220px;
+        height: auto;
+    }
+    
+    .hypoxia-chart {
+        min-height: 150px !important;
+        height: auto !important;
+    }
+    
+    .footer-links-compact {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .home-page {
+        padding: 0.5rem;
+    }
+    
+    .main-buttons {
+        margin-top: 1rem;
+        padding: 1rem;
+    }
+    
+    .chart-container {
+        min-height: 200px;
+        height: auto;
+    }
+    
+    .hypoxia-chart {
+        min-height: 140px !important;
+        height: auto !important;
+    }
+    
+    .main-button {
+        padding: 0.8rem;
+    }
+    
+    .app-title-compact {
+        font-size: 1.2rem;
+    }
+    
+    .logo-container-compact img {
+        width: 80px;
+        height: 60px;
+    }
+}
+
+/* Стили для статуса соединения */
+.connection-status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.connection-info {
+    display: flex;
+    align-items: center;
+}
+
+/* Стили для деталей пациентки */
+.patient-detail-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.patient-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.8rem;
+}
+
+.close-detail {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.close-detail:hover {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.patient-info h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.8rem;
+    color: #555;
+}
+
+.sessions-list {
+    margin-top: 1.5rem;
+}
+
+.session-card {
+    background-color: #f9f9f9;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+    border: 1px solid #eee;
+}
+
+.session-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.btn-small {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+    border: none;
+    background-color: #e3f2fd;
+    color: var(--primary-color);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-small:hover {
+    background-color: #bbdefb;
+}
+
+.new-session-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px dashed #ddd;
+}
+
+.chip {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    border-radius: 16px;
+    background-color: #f1f1f1;
+    color: #555;
+    font-size: 0.75rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.session-charts {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+
+/* Стили для кнопок в деталях пациентки */
+.patient-detail-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.btn-edit {
+    background-color: #e3f2fd;
+    color: var(--primary-color);
+    border-radius: 4px;
+    padding: 0.6rem 1rem;
+    border: 1px solid #bbdefb;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    flex: 1;
+}
+
+.btn-edit:hover {
+    background-color: #bbdefb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-delete {
+    background-color: #ffebee;
+    color: var(--danger-color);
+    border-radius: 4px;
+    padding: 0.6rem 1rem;
+    border: 1px solid #ffcdd2;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    flex: 1;
+}
+
+.btn-delete:hover {
+    background-color: #ffcdd2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Стили для кнопок в сессиях */
+.session-actions {
+    display: flex;
+    gap: 0.8rem;
+    margin-top: 0.5rem;
+}
+
+.btn-view {
+    background-color: #e3f2fd;
+    color: var(--primary-color);
+    border-radius: 4px;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #bbdefb;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-view:hover {
+    background-color: #bbdefb;
+}
+
+.btn-delete-session {
+    background-color: #ffebee;
+    color: var(--danger-color);
+    border-radius: 4px;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #ffcdd2;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-delete-session:hover {
+    background-color: #ffcdd2;
+}
+
+/* Стили для предотвращения мелькания при загрузке */
+[x-cloak] { 
+    display: none !important; 
+}
+
+
+/* Стили для кнопок управления скоростью */
+.speed-control-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.8rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.speed-control-title {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.speed-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.speed-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid #ddd;
+    background-color: white;
+    color: #555;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.speed-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.speed-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Стили для кнопок соединения */
+.connection-buttons {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.connection-buttons .btn:first-child {
+    background-color: #e3f2fd;
+    color: var(--primary-color);
+    border: 1px solid #bbdefb;
+}
+
+.connection-buttons .btn:first-child.disabled {
+    background-color: #f5f5f5;
+    color: #bbb;
+    border: 1px solid #ddd;
+    cursor: not-allowed;
+}
+
+/* Стили для статистики КТГ */
+.statistics-container {
+    display: flex;
+    justify-content: space-around;
+    margin: 1.5rem 0;
+}
+
+.statistics-item {
+    text-align: center;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    flex: 1;
+    margin: 0 0.5rem;
+}
+
+.statistics-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.statistics-label {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Стили для ссылки статистики */
+.statistics-link {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.link-small {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.link-small:hover {
+    color: #0d47a1;
+    text-decoration: underline;
+}
+
+.link-small i {
+    margin-right: 0.3rem;
+    font-size: 0.9rem;
+}
+
+/* Панель управления воспроизведением */
+/* Панель управления воспроизведением - стиль шестеренки меню */
+.playback-control-panel {
+    position: fixed;
+    top: 1rem;
+    right: 30%; /* Размещаем справа от кнопки настроек */
+    z-index: 1000;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.playback-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.playback-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background-color: white;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.playback-btn:hover {
+    background-color: #f5f5f5;
+    transform: scale(1.1);
+}
+
+/* Кнопка паузы с голубым оттенком */
+.playback-btn.pause-btn {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    box-shadow: 0 2px 5px rgba(25, 118, 210, 0.2);
+}
+
+.playback-btn.pause-btn:hover {
+    background-color: #bbdefb;
+    transform: scale(1.1);
+}
+
+/* Скорость воспроизведения */
+.speed-control {
+    display: flex;
+    gap: 0.3rem;
+    padding: 0 0.5rem;
+    border-left: 1px solid #e0e0e0;
+    border-right: 1px solid #e0e0e0;
+}
+
+.speed-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    border: 1px solid #e0e0e0;
+    background-color: white;
+    color: #555;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+}
+
+.speed-btn:hover {
+    background-color: #f5f5f5;
+}
+
+.speed-btn.active {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    border-color: #bbdefb;
+    font-weight: 600;
+}
+
+/* Иконки в кнопках */
+.playback-btn i {
+    font-size: 1.2rem;
+}
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 768px) {
+    .playback-control-panel {
+        right: 1rem;
+        top: auto;
+        bottom: 1rem;
+        left: 1rem;
+        right: 1rem;
+        padding: 0.8rem;
+    }
+    
+    .playback-buttons {
+        gap: 0.5rem;
+    }
+    
+    .playback-btn {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .speed-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 0.7rem;
+    }
+}
+
+/* Стили для информационных блоков мониторинга */
+.monitoring-info {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 4px solid var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.monitoring-info h6 {
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-bottom: 0.8rem;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.monitoring-info p {
+    margin: 0.5rem 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.monitoring-info b {
+    color: #495057;
+    font-weight: 600;
+}
+
+.forecast-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0.4rem 0;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.forecast-item:last-child {
+    border-bottom: none;
+}
+
+.forecast-time {
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-weight: 500;
+    min-width: 50px;
+}
+
+.forecast-status {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-weight: 500;
+    text-align: center;
+    flex: 1;
+    margin-left: 0.5rem;
+}
+
+.forecast-status.forecast-normal {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.forecast-status.forecast-warning {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.forecast-status.forecast-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.hypoxia-indicator {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    margin: 0.5rem 0;
+}
+
+.hypoxia-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--danger-color);
+    line-height: 1;
+}
+
+.hypoxia-label {
+    font-size: 1rem;
+    color: #6c757d;
+    margin-left: 0.2rem;
+}
+
+.hypoxia-trend {
+    text-align: center;
+    margin: 0.3rem 0;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.hypoxia-trend i {
+    font-size: 1rem;
+    vertical-align: middle;
+    margin-right: 0.3rem;
+}
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 768px) {
+    .monitoring-info h6 {
+        font-size: 0.8rem;
+    }
+    
+    .monitoring-info p {
+        font-size: 0.8rem;
+    }
+    
+    .forecast-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+    }
+    
+    .forecast-status {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .hypoxia-value {
+        font-size: 1.5rem;
+    }
+}

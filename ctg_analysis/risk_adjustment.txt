@@ -1,0 +1,34 @@
+# ctg_analysis/risk_adjustment.py
+"""
+Учёт анамнеза: score-баллы и корректировка классификации
+"""
+RISK_SCORES = {
+    "diabetes": 2,
+    "anemia": 1,
+    "hypertension": 2,
+    "preeclampsia": 3,
+    "infections": 2,
+    "multiple": 2,
+    "placenta": 3,
+    "term": 2   # <37  >41
+}
+
+def calculate_risk_score(risk_factors: dict) -> int:
+    score = 0
+    for key, value in risk_factors.items():
+        if value == 1:
+            score += RISK_SCORES.get(key, 0)
+    return score
+
+def adjust_classification(base_class: str, risk_score: int, guideline="FIGO"):
+    if guideline == "FIGO":
+        if base_class == "normal" and risk_score >= 4:
+            return "suspicious"
+        elif base_class == "suspicious" and risk_score >= 4:
+            return "pathological"
+    if guideline == "NICHD":
+        if base_class == "Category I" and risk_score >= 4:
+            return "Category II"
+        elif base_class == "Category II" and risk_score >= 4:
+            return "Category III"
+    return base_class

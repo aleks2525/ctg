@@ -1,0 +1,86 @@
+# ctg_analysis/figo_nice.py
+"""
+Полная классификация по FIGO/NICE
+"""
+
+import numpy as np
+from .common import calc_baseline, calc_variability, detect_accelerations, detect_decelerations
+
+def evaluate_baseline(baseline):
+    if 110 <= baseline <= 160:
+        return "reassuring"
+    elif 100 <= baseline < 110 or 161 <= baseline <= 180:
+        return "non-reassuring"
+    else:  # <100 или >180
+        return "abnormal"
+
+def evaluate_variability(variability):
+    if 5 <= variability <= 25:
+        return "reassuring"
+    elif variability < 5 for 40-90 min OR >25 for 10-25 min
+        return "non-reassuring"
+    else:
+        return "abnormal"
+
+def evaluate_accelerations(accels, duration=20):
+    # NICE: ≥2 accels в 20 мин - reassuring
+    if accels >= 2:
+        return "reassuring"
+    else:
+        # отсутствие акцелераций не трактуется как патология само по себе
+        return "non-reassuring"
+
+def evaluate_decelerations(decels_count, pattern="none"):
+    """
+    pattern может быть: 'none', 'early', 'variable', 'late', 'prolonged'
+    Для примера: передаём pattern из анализа сигнала.
+    """
+    if pattern == "none" or pattern == "early":
+        return "reassuring"
+    elif pattern == "variable" and decels_count < 5:
+        return "non-reassuring"
+    elif pattern == "late" or (pattern == "variable" and decels_count >= 5):
+        return "abnormal"
+    elif pattern == "prolonged":
+        return "abnormal"
+    else:
+        return "non-reassuring"
+
+def classify_figo(fhr_series, ga_weeks=37):
+    baseline = calc_baseline(fhr_series)
+    variability = calc_variability(fhr_series)
+    accels = detect_accelerations(fhr_series, baseline, ga_weeks)
+    # Для упрощения: пока pattern ставим 'none'
+    decels_count = detect_decelerations(fhr_series, baseline)
+    dec_pattern = "none" if decels_count == 0 else "variable"
+
+    baseline_eval = evaluate_baseline(baseline)
+    variability_eval = evaluate_variability(variability)
+    accels_eval = evaluate_accelerations(accels)
+    decels_eval = evaluate_decelerations(decels_count, dec_pattern)
+
+    evaluations = [baseline_eval, variability_eval, accels_eval, decels_eval]
+
+    # Итоговая совокупная классификация
+    if all(ev == "reassuring" for ev in evaluations):
+        label, code = "Normal", 0
+    elif evaluations.count("non-reassuring") == 1 and all(ev in ["reassuring", "non-reassuring"] for ev in evaluations):
+        label, code = "Suspicious", 1
+    else:
+        label, code = "Pathological", 2
+
+    return {
+        "code": code,
+        "label": label,
+        "baseline": baseline,
+        "variability": variability,
+        "accelerations": accels,
+        "decelerations": decels_count,
+        "evaluations": {
+            "baseline": baseline_eval,
+            "variability": variability_eval,
+            "accelerations": accels_eval,
+            "decelerations": decels_eval
+        },
+        "source": "FIGO/NICE"
+    }

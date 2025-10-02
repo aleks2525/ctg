@@ -1,0 +1,168 @@
+import csv
+from typing import List, Optional, Tuple
+import math
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Настройки
+WINDOW_MIN = 2  # окно в минутах
+STEP_MIN = 1    # шаг скользящего окна в минутах
+THRESH_AHEAD = 10  # порог "ускорение" как превышение baseline на хотя бы 10 уд/мин
+DEFICIT_THRESHOLD = 5  # порог снижения относительно baseline для замедления (пример)
+
+# Простая эвристика нахождения акселераций/децелераций внутри окна
+def detect_accel_decel(window_fhr: List[float], baseline: float) -> Tuple[bool, bool]:
+    """
+    Возвращает (accel_present, decel_present)
+    accel_present: есть резкое повышение FHR внутри окна по сравнению с baseline
+    decel_present: есть позднее/замедление после ускорения или снижение ниже порога
+    """
+    if not window_fhr:
+        return False, False
+    # Поиск акселераций: любое значение > baseline + THRESH_AHEAD
+    accel_present = any(fhr >= baseline + THRESH_AHEAD for fhr in window_fhr)
+    # Поиск поздних замедлений: простая эвристика — любые значения ниже baseline DEFICIT_THRESHOLD ниже baseline
+    decel_present = any(fhr <= baseline - DEFICIT_THRESHOLD for fhr in window_fhr)
+    return accel_present, decel_present
+
+def calc_window_risk_with_accdec(baseline_fhr: List[float],
+                                 variability: Optional[float],
+                                 uc_count: int,
+                                 accel_present: bool,
+                                 decel_present: bool,
+                                 accel_count: int,
+                                 decel_count: int) -> float:
+    if baseline_fhr:
+        baseline = sum(baseline_fhr) / len(baseline_fhr)
+    else:
+        baseline = None
+
+    if baseline is None:
+        baseline_score = 2
+    else:
+        if 110 <= baseline <= 160:
+            baseline_score = 0
+        elif 105 <= baseline < 110 or 160 < baseline <= 165:
+            baseline_score = 1
+        else:
+            baseline_score = 2
+
+    if variability is None:
+        var_score = 1
+    else:
+        if variability >= 6:
+            var_score = 0
+        elif 3 <= variability < 6:
+            var_score = 1
+        else:
+            var_score = 2
+
+    dec_score = 2 if decel_present else 0
+    acc_score = 0 if accel_present else 1
+
+    acc_count_score = max(0, min(1, 2 - accel_count))
+    dec_count_score = max(0, min(2, decel_count))
+
+    total = baseline_score + var_score + dec_score + acc_score + acc_count_score + dec_count_score
+    risk = max(0.0, min(1.0, total / 9.0))
+    return risk
+
+def main():
+    input_csv = "fhr_uc_variability.csv"  # замените на ваш путь
+    # Считываем данные в DataFrame для удобного обращения
+    df = pd.read_csv(input_csv)
+
+    # Предполагаем, что в входе есть строки на каждую "точку" времени с полями:
+    # time, fhr (один показатель за точку) или fhr_list (JSON-список значений за окно)
+    # variability (число) и uc (число сокращений за окно)
+    # Если ваша структура иная, адаптируйте загрузку ниже.
+
+    # Приводим к спискам по времени
+    # Упрощение: будем считать, что у нас уже посылка по часу, и нам нужно окно по интервалу
+    # Создаем список словарей с нужными полями
+    rows = []
+    for _, row in df.iterrows():
+        t = float(row["time"])
+        fhr = row.get("fhr", None)
+        # если fhr хранится как список в виде строки, попробуем разобрать
+        if isinstance(fhr, str) and fhr.strip().startswith("["):
+            try:
+                import ast
+                fhr_vals = ast.literal_eval(fhr)
+                fhr_list = [float(v) for v in fhr_vals]
+            except Exception:
+                fhr_list = [float(fhr)]
+        else:
+            fhr_list = [float(fhr)] if not pd.isna(fhr) else []
+        variability = None
+        if "variability" in row and not pd.isna(row["variability"]):
+            try:
+                variability = float(row["variability"])
+            except ValueError:
+                variability = None
+        uc = int(row["uc"]) if "uc" in row and not pd.isna(row["uc"]) else 0
+        rows.append({"time": t, "fhr_list": fhr_list, "variability": variability, "uc": uc})
+
+    # Преобразуем в скользящее окно
+    results = []
+    window_len = WINDOW_MIN  # количество шагов по времени? Здесь предполагаем, что входные данные идут по минутам
+    step = STEP_MIN
+
+    # Для простоты: считаем один показатель fhr_baseline как среднее в окне
+    i = 0
+    n = len(rows)
+    while i + window_len <= n:
+        window = rows[i:i+window_len]
+        # Собираем baseline FHR внутри окна
+        baseline_fhr = []
+        for w in window:
+            baseline_fhr.extend(w["fhr_list"])
+        variability_vals = [w["variability"] for w in window if w["variability"] is not None]
+        uc_count = sum(int(w["uc"]) for w in window)
+
+        # Определяем эвристически accel/decel по окну на основе baseline и внутри окна fhr
+        # возьмем базовую линию за окно как среднее из baseline_fhr
+        baseline = sum(baseline_fhr) / len(baseline_fhr) if baseline_fhr else None
+        accel_present, decel_present = detect_accel_decel(baseline_fhr, baseline)  # простая детекция
+        accel_count = sum(1 for w in window for v in w["fhr_list"] if v >= (baseline or 0) + THRESH_AHEAD)
+        decel_count = sum(1 for w in window for v in w["fhr_list"] if baseline is not None and v <= baseline - DEFICIT_THRESHOLD)
+
+        variability = variability_vals[0] if variability_vals else None  # усреднить можно иначе
+
+        risk = calc_window_risk_with_accdec(
+            baseline_fhr=baseline_fhr,
+            variability=variability,
+            uc_count=uc_count,
+            accel_present=accel_present,
+            decel_present=decel_present,
+            accel_count=accel_count,
+            decel_count=decel_count
+        )
+        t_center = (window[0]["time"] + window[-1]["time"]) / 2.0
+        results.append({"time_min": t_center, "risk": risk})
+        i += step
+
+    # Визуализация
+    times = [r["time_min"] for r in results]
+    risks = [r["risk"] for r in results]
+
+    plt.figure(figsize=(10, 4))
+    plt.plot(times, risks, label="Risk of Hypoxia (auto accel/decel detection)")
+    plt.xlabel("Time (мин)")
+    plt.ylabel("Risk (0..1)")
+    plt.title("Эвристический график гипоксии (FHR, UC, вариабельность) с авто-декцией акс/децелераций")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("hypoxia_risk_autodetect.png", dpi=300)
+    plt.show()
+
+    # Сохранение данных
+    with open("hypoxia_risk_series_autodetect.csv", "w", newline="", encoding="utf-8") as out:
+        writer = csv.DictWriter(out, fieldnames=["time_min", "risk"])
+        writer.writeheader()
+        for r in results:
+            writer.writerow({"time_min": r["time_min"], "risk": r["risk"]})
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,49 @@
+# ctg_analysis/nichd_acog.py
+"""
+Полная классификация по NICHD/ACOG
+"""
+
+from .common import calc_baseline, calc_variability, detect_accelerations, detect_decelerations
+
+def classify_nichd(fhr_series, ga_weeks=37):
+    baseline = calc_baseline(fhr_series)
+    var_val = calc_variability(fhr_series)
+    accels = detect_accelerations(fhr_series, baseline, ga_weeks)
+    decels_count = detect_decelerations(fhr_series, baseline)
+    dec_pattern = "late" if decels_count > 3 else "none"  # упрощенная подмена
+
+    # Вариабельность — категориально
+    if var_val == 0:
+        variability = "absent"
+    elif var_val <= 5:
+        variability = "minimal"
+    elif 6 <= var_val <= 25:
+        variability = "moderate"
+    else:
+        variability = "marked"
+
+    # --- Категории ---
+    # Category I
+    if 110 <= baseline <= 160 and variability == "moderate" and decels_count == 0:
+        label, code = "Category I", 0
+    # Category III
+    elif variability == "absent" and (dec_pattern == "late" or dec_pattern == "variable" or baseline < 110):
+        label, code = "Category III", 2
+    elif variability == "absent" and decels_count > 0:
+        label, code = "Category III", 2
+    else:
+        # всё, что не попало в I / III → Category II
+        label, code = "Category II", 1
+
+    return {
+        "code": code,
+        "label": label,
+        "baseline": baseline,
+        "variability": variability,
+        "accelerations": accels,
+        "decelerations": {
+            "count": decels_count,
+            "pattern": dec_pattern
+        },
+        "source": "NICHD/ACOG"
+    }
